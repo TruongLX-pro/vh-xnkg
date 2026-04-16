@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ClockCircleOutlined, HistoryOutlined } from '@ant-design/icons-vue'
+import { Grid } from 'ant-design-vue'
 import { storeToRefs } from 'pinia'
 import { computed, ref, watch } from 'vue'
 import { useTeacherQueue } from '../composables/useTeacherQueue'
@@ -7,15 +8,16 @@ import { useTeachingRequestStore } from '../stores/teachingRequest'
 import type { RequestItem } from '../types'
 import {
   getConfirmationMeta,
+  getResolutionResultColor,
+  getResolutionResultLabel,
   getSlaMeta,
-  getStatusColor,
-  getStatusLabel,
   getTypeTone,
 } from '../utils/requestPresentation'
 
 const store = useTeachingRequestStore()
 const { teacherProfile, teacherPendingRequests, isSubmitting } = storeToRefs(store)
 const { activeTab, keyword, typeFilter, pendingRows, historyRows } = useTeacherQueue()
+const screens = Grid.useBreakpoint()
 
 const promptRequestId = ref<string>()
 const introPromptVisible = ref(false)
@@ -28,6 +30,43 @@ const hasAutoPrompted = ref(false)
 const promptRequest = computed(() =>
   teacherPendingRequests.value.find((item) => item.id === promptRequestId.value) ?? null,
 )
+const teacherPromptModalWidth = computed(() =>
+  screens.value.xl ? 1180 : screens.value.lg ? 1080 : screens.value.md ? 820 : 'calc(100vw - 24px)',
+)
+const teacherImportantNotes = [
+  {
+    title: '📌 NOTE QUAN TRỌNG',
+    body: '',
+  },
+  {
+    title: '1. Ngày khai giảng',
+    body: 'Không thể dạy buổi đầu thì báo ngay cho Vận hành và bỏ tích các lịch không còn nhận lớp.',
+  },
+  {
+    title: '2. Nhắc lịch',
+    body: 'Đặt báo thức để không quên lịch, và không cover buổi đầu tiên.',
+  },
+  {
+    title: '3. Vào lớp',
+    body: 'Chỉ vào lớp trước giờ học khoảng 2-3 phút.',
+  },
+  {
+    title: '4. Hỗ trợ kỹ thuật',
+    body: 'Nếu có lỗi kỹ thuật trong giờ, nhắn CHATBOT để được hỗ trợ.',
+  },
+  {
+    title: '5. Hủy lớp',
+    body: 'Không tự ý hủy lớp khi chưa có xác nhận từ Vận hành.',
+  },
+  {
+    title: '6. Kiểm tra ERP',
+    body: 'Vui lòng kiểm tra lại lịch dạy trên ERP ngay sau khi xác nhận nhận lớp.',
+  },
+  {
+    title: '7. Cần hỗ trợ thêm',
+    body: 'Nếu có vướng mắc về lớp hoặc lịch dạy, phản hồi sớm để Teacher Care hỗ trợ kịp thời.',
+  },
+]
 
 watch(
   teacherPendingRequests,
@@ -215,7 +254,10 @@ function getTeacherTypeLabel(requestType: RequestItem['requestType']) {
           <template v-else-if="column.key === 'classCode'">
             <div>
               <div class="font-medium text-slate-900">{{ record.classCode }}</div>
-              <div class="text-xs text-slate-500">{{ record.className }}</div>
+              <div class="text-xs text-slate-500">
+                {{ record.className }}
+                <span v-if="record.classMode"> · {{ record.classMode }}</span>
+              </div>
             </div>
           </template>
           <template v-else-if="column.key === 'startDate'">
@@ -263,7 +305,10 @@ function getTeacherTypeLabel(requestType: RequestItem['requestType']) {
           <template v-else-if="column.key === 'classCode'">
             <div>
               <div class="font-medium text-slate-900">{{ record.classCode }}</div>
-              <div class="text-xs text-slate-500">{{ record.className }}</div>
+              <div class="text-xs text-slate-500">
+                {{ record.className }}
+                <span v-if="record.classMode"> · {{ record.classMode }}</span>
+              </div>
             </div>
           </template>
           <template v-else-if="column.key === 'startDate'">
@@ -271,9 +316,11 @@ function getTeacherTypeLabel(requestType: RequestItem['requestType']) {
           </template>
           <template v-else-if="column.key === 'status'">
             <div>
-              <a-tag :color="getStatusColor(record.status)">{{ getStatusLabel(record.status) }}</a-tag>
+              <a-tag :color="getResolutionResultColor(record.resolutionResult)">
+                {{ getResolutionResultLabel(record.resolutionResult) }}
+              </a-tag>
               <a-tag
-                v-if="record.status === 'Confirmed' && getConfirmationMeta(record)"
+                v-if="record.resolutionResult === 'Confirmed' && getConfirmationMeta(record)"
                 class="mt-1"
                 :color="getConfirmationMeta(record)?.tone"
               >
@@ -301,45 +348,79 @@ function getTeacherTypeLabel(requestType: RequestItem['requestType']) {
       v-model:open="introPromptVisible"
       title="Thông báo mới cần xác nhận"
       :footer="null"
-      width="760px"
+      :width="teacherPromptModalWidth"
     >
       <template v-if="teacherPendingRequests.length">
         <div class="space-y-4">
-          <a-alert
-            type="info"
-            show-icon
-            message="Bạn có thông báo cần xử lý"
-            description="Theo nghiệp vụ, giáo viên xác nhận hoặc từ chối trực tiếp trên ERP sau khi đã kiểm tra thời khóa biểu."
-          />
-
           <div class="space-y-3">
             <div
               v-for="item in teacherPendingRequests"
               :key="item.id"
-              class="rounded-[22px] border border-slate-200 bg-[#f8fafc] px-5 py-4"
+              class="rounded-[22px] border border-slate-200 bg-[#f8fafc] px-4 py-4 sm:px-5"
             >
-              <div class="flex items-start justify-between gap-4">
-                <div class="min-w-0 flex-1">
-                  <div class="flex flex-wrap items-center gap-2">
-                    <div class="font-semibold text-slate-900">{{ item.classCode }}</div>
-                    <a-tag :color="getTypeTone(item.requestType)" class="border-0">
-                      {{ getTeacherTypeLabel(item.requestType) }}
-                    </a-tag>
-                  </div>
-                  <div class="mt-3 text-sm text-slate-600">
-                    {{ item.startDate }} | {{ item.scheduleSummary }}
-                  </div>
-                  <div class="mt-2 text-sm text-slate-600">Level: {{ item.level }}</div>
-                  <div class="mt-3 text-sm font-semibold text-[#d46b08]">
-                    Hạn xác nhận: {{ item.deadlineConfirmAt }}
+              <div class="grid gap-4 lg:grid-cols-[380px_minmax(0,1fr)] lg:items-stretch xl:grid-cols-[400px_minmax(0,1fr)]">
+                <div class="min-w-0">
+                  <div class="flex h-full flex-col rounded-2xl border border-slate-200 bg-white p-4">
+                    <div class="flex flex-wrap items-center gap-2">
+                      <div class="font-semibold text-slate-900">{{ item.classCode }}</div>
+                      <a-tag :color="getTypeTone(item.requestType)" class="border-0">
+                        {{ getTeacherTypeLabel(item.requestType) }}
+                      </a-tag>
+                    </div>
+                    <div class="mt-3 text-sm text-slate-600">
+                      {{ item.startDate }} | {{ item.scheduleSummary }}
+                    </div>
+                    <div class="mt-2 text-sm text-slate-600">Level: {{ item.level }}</div>
+                    <div v-if="item.classMode" class="mt-2 text-sm text-slate-600">
+                      Loại lớp: {{ item.classMode }}
+                    </div>
+                    <div class="mt-3 text-sm font-semibold text-[#d46b08]">
+                      Hạn xác nhận: {{ item.deadlineConfirmAt }}
+                    </div>
+
+                    <div class="mt-auto pt-4 grid grid-cols-1 gap-2">
+                      <a-button
+                        type="primary"
+                        class="w-full min-w-0"
+                        :loading="isSubmitting"
+                        @click="openTeacherConfirm(item.id)"
+                      >
+                        Tôi đồng ý nhận lớp
+                      </a-button>
+                      <a-button danger ghost class="w-full min-w-0" @click="openTeacherReject(item.id)">
+                        Từ chối lớp
+                      </a-button>
+                    </div>
                   </div>
                 </div>
 
-                <div class="flex items-center gap-2">
-                  <a-button danger ghost @click="openTeacherReject(item.id)">Từ chối lớp</a-button>
-                  <a-button type="primary" :loading="isSubmitting" @click="openTeacherConfirm(item.id)">
-                    Xác nhận ngay
-                  </a-button>
+                <div class="h-full rounded-2xl border border-amber-200 bg-amber-50/70 p-4">
+                  <div class="space-y-2 text-xs leading-5 text-slate-700">
+                    <div
+                      v-for="note in teacherImportantNotes"
+                      :key="note.title"
+                      :class="
+                        note.title === '📌 NOTE QUAN TRỌNG'
+                          ? ''
+                          : 'grid gap-y-0.5 lg:grid-cols-[120px_minmax(0,1fr)] lg:gap-x-3'
+                      "
+                    >
+                      <div
+                        :class="[
+                          'font-semibold text-slate-900',
+                          note.title === '📌 NOTE QUAN TRỌNG' ? 'text-sm text-amber-700' : '',
+                        ]"
+                      >
+                        {{ note.title }}
+                      </div>
+                      <div v-if="note.body" class="text-slate-700">
+                        {{ note.body }}
+                      </div>
+                    </div>
+                    <div class="mt-2 border-t border-amber-200 pt-2 font-semibold text-slate-900">
+                      Cảm ơn Thầy/Cô ạ! ❤️❤️❤️
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>

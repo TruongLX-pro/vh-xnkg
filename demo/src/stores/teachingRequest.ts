@@ -2,13 +2,17 @@ import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
 import {
   addOperationalNote,
+  cancelTeachingRequestByOps,
   confirmTeachingRequestByOps,
   confirmTeachingRequestByTeacher,
   createManualInformationRequest,
   getTeachingRequests,
+  markTeachingRequestHandled,
   rejectTeachingRequest,
   rejectTeachingRequestByTeacher,
   resendTeachingRequest,
+  simulateScheduleChange,
+  simulateTeacherChange,
 } from '../services/teachingRequestService'
 import type {
   ConfirmPayload,
@@ -23,15 +27,13 @@ import { rejectReasonOptions } from '../utils/requestPresentation'
 function buildStats(requests: RequestItem[]): RequestStats {
   return requests.reduce(
     (summary, item) => {
-      summary[item.status] += 1
+      summary[item.processingStatus] += 1
       return summary
     },
     {
-      AwaitingConfirmation: 0,
-      Confirmed: 0,
-      Rejected: 0,
-      Expired: 0,
-      InformationSent: 0,
+      Pending: 0,
+      InProgress: 0,
+      Done: 0,
     } as RequestStats,
   )
 }
@@ -67,11 +69,15 @@ export const useTeachingRequestStore = defineStore('teaching-request', () => {
   )
 
   const teacherPendingRequests = computed(() =>
-    teacherRequests.value.filter((item) => item.status === 'AwaitingConfirmation'),
+    teacherRequests.value.filter(
+      (item) => item.processingStatus === 'Pending' && !item.resolutionResult,
+    ),
   )
 
   const teacherHistoryRequests = computed(() =>
-    teacherRequests.value.filter((item) => item.status !== 'AwaitingConfirmation'),
+    teacherRequests.value.filter(
+      (item) => item.processingStatus !== 'Pending' || Boolean(item.resolutionResult),
+    ),
   )
 
   const teacherProfile = computed(() => teacherRequests.value[0] ?? null)
@@ -248,6 +254,70 @@ export const useTeachingRequestStore = defineStore('teaching-request', () => {
     }
   }
 
+  async function markSelectedRequestHandled() {
+    if (!selectedRequestId.value || isSubmitting.value) {
+      return
+    }
+
+    isSubmitting.value = true
+
+    try {
+      requests.value = await markTeachingRequestHandled(selectedRequestId.value)
+      closeDetail()
+    } finally {
+      isSubmitting.value = false
+    }
+  }
+
+  async function markRequestHandled(request: RequestItem) {
+    selectRequest(request.id)
+    await markSelectedRequestHandled()
+  }
+
+  async function cancelSelectedRequest(reason: string) {
+    if (!selectedRequestId.value || !reason.trim() || isSubmitting.value) {
+      return
+    }
+
+    isSubmitting.value = true
+
+    try {
+      requests.value = await cancelTeachingRequestByOps(selectedRequestId.value, reason.trim())
+      closeDetail()
+    } finally {
+      isSubmitting.value = false
+    }
+  }
+
+  async function simulateSelectedTeacherChange() {
+    if (!selectedRequestId.value || isSubmitting.value) {
+      return
+    }
+
+    isSubmitting.value = true
+
+    try {
+      requests.value = await simulateTeacherChange(selectedRequestId.value)
+      closeDetail()
+    } finally {
+      isSubmitting.value = false
+    }
+  }
+
+  async function simulateSelectedScheduleChange() {
+    if (!selectedRequestId.value || isSubmitting.value) {
+      return
+    }
+
+    isSubmitting.value = true
+
+    try {
+      requests.value = await simulateScheduleChange(selectedRequestId.value)
+    } finally {
+      isSubmitting.value = false
+    }
+  }
+
   return {
     requests,
     isLoaded,
@@ -285,5 +355,10 @@ export const useTeachingRequestStore = defineStore('teaching-request', () => {
     resendRequest,
     addRequestNote,
     createManualRequest,
+    markSelectedRequestHandled,
+    markRequestHandled,
+    cancelSelectedRequest,
+    simulateSelectedTeacherChange,
+    simulateSelectedScheduleChange,
   }
 })

@@ -2,34 +2,25 @@
 
 ## 1. Mục tiêu
 
-Tài liệu này chốt lại ngữ cảnh nghiệp vụ của tính năng thông báo giáo viên, dựa trên:
+Tài liệu này chốt lại nghiệp vụ mới nhất của tính năng thông báo giáo viên trên ERP, sau khi đã cập nhật lại model xử lý trên màn vận hành và luồng xử lý giữa ERP - Telegram - giáo viên.
 
-- các tài liệu nghiệp vụ gốc đã cung cấp
-- toàn bộ trao đổi cập nhật nghiệp vụ trong thread triển khai
-- trạng thái sản phẩm demo hiện tại trong thư mục `demo`
+Mục tiêu của tài liệu:
 
-Mục tiêu là tạo một baseline chung cho Product, Operations, GVU, CM, FE, BE, QA khi tiếp tục phát triển tính năng này.
-
----
+- thống nhất cách hiểu giữa Product, Operations, GVU, CM, FE, BE, QA
+- chốt model dữ liệu và state machine ở mức business
+- làm baseline cho các thay đổi tiếp theo của màn vận hành, màn giáo viên, BE và QA test case
 
 ## 2. Phạm vi tính năng
 
-Tính năng quản lý thông báo giáo viên gồm 2 phía:
+Tính năng gồm 2 phần:
 
-- Màn vận hành trên ERP để theo dõi, gửi lại Telegram, can thiệp xác nhận hoặc từ chối thay cho giáo viên khi cần.
-- Màn giáo viên trên ERP để giáo viên xem các thông báo cần phản hồi và thực hiện xác nhận hoặc từ chối trực tiếp trên ERP.
+- Màn vận hành trên ERP để theo dõi và xử lý các bản ghi thông báo giáo viên
+- Màn giáo viên trên ERP để giáo viên xác nhận hoặc từ chối các thông báo cần phản hồi
 
-Telegram là kênh đẩy thông báo ra ngoài. ERP là nơi ghi nhận trạng thái chính thức.
+Telegram là kênh gửi thông báo ra ngoài.  
+ERP là nơi ghi nhận trạng thái chính thức và lịch sử xử lý.
 
-Nguyên tắc hiện tại:
-
-- Telegram gửi tới giáo viên phải kèm link vào ERP.
-- Với các loại thông báo cần phản hồi, giáo viên xác nhận hoặc từ chối trên ERP.
-- Với các loại chỉ cần gửi thông tin, Telegram chỉ đóng vai trò thông báo; màn giáo viên không cần hiển thị các item này.
-
----
-
-## 3. Nhóm nghiệp vụ chuẩn
+## 3. Nhóm loại thông báo
 
 ### 3.1. Nhóm cần giáo viên phản hồi
 
@@ -39,29 +30,18 @@ Ba loại sau bắt buộc giáo viên phản hồi:
 2. Báo lớp chuyển ngang
 3. Báo đổi lịch học
 
-Hành động của giáo viên:
-
-- Nhận lớp
-- Từ chối lớp
-
-Kênh phản hồi chuẩn hiện tại:
-
-- phản hồi trên ERP
-
 ### 3.2. Nhóm chỉ gửi thông tin
 
 Hai loại sau không yêu cầu giáo viên phản hồi:
 
-1. Báo lớp up/down level
-2. Báo lớp kết thúc
+1. Báo lớp kết thúc
+2. Khác
 
-Quy ước hiển thị:
+Lưu ý:
 
-- Không hiển thị trong màn giáo viên.
-- Vẫn tồn tại trong màn vận hành để theo dõi lịch sử gửi thông tin.
-- `Báo lớp up/down level` đang được biểu diễn bằng luồng tạo thủ công ở vận hành và được gán loại `Khác`.
-
----
+- `Khác` là nhãn kỹ thuật trên màn vận hành
+- use case business phổ biến của `Khác` là up/down level hoặc các trường hợp tạo thủ công
+- các loại chỉ gửi thông tin không hiển thị trong màn giáo viên
 
 ## 4. Rule nguồn phát sinh
 
@@ -70,499 +50,395 @@ Nguồn phát sinh chỉ gồm 2 giá trị:
 - `GVU`
 - `CM`
 
-Rule xác định nguồn:
+Rule xác định:
 
-- Những lớp chưa diễn ra buổi học đầu tiên thì nguồn phát sinh tính cho `GVU`.
-- Những lớp đã phát sinh buổi học đầu tiên thì nguồn phát sinh tính cho `CM`.
+- lớp chưa diễn ra buổi học đầu tiên thì nguồn phát sinh là `GVU`
+- lớp đã phát sinh buổi học đầu tiên thì nguồn phát sinh là `CM`
 
-Áp dụng cho cả luồng tự động và bản ghi tạo thủ công.
+Rule này áp dụng cho cả trigger tự động và thông báo tạo thủ công.
 
----
+## 5. Đơn vị theo dõi trên màn vận hành
 
-## 5. Danh mục loại thông báo
+Mỗi bản ghi thông báo trên màn vận hành được theo dõi theo cặp khóa:
 
-Danh mục nghiệp vụ chuẩn ở vận hành:
+- `Mã lớp`
+- `Giáo viên`
 
-1. Báo lớp khai giảng
-2. Báo lớp chuyển ngang
-3. Báo đổi lịch học
-4. Báo lớp kết thúc
-5. Khác
+Lưu ý nghiệp vụ:
 
-Quy ước text hiển thị ở phía giáo viên:
+- UI và business queue theo dõi theo cặp `Mã lớp + Giáo viên`
+- hệ thống vẫn cần `requestId` để định danh từng bản ghi cụ thể
+- cùng một cặp `Mã lớp + Giáo viên` có thể phát sinh nhiều bản ghi theo thời gian nếu bản ghi trước đã hoàn thành
 
-- `Báo lớp khai giảng` giữ nguyên
-- `Báo lớp chuyển ngang` hiển thị là `Đổi giáo viên`
-- `Báo đổi lịch học` hiển thị là `Đổi lịch học`
+## 6. Model nghiệp vụ mới: Trạng thái và Kết quả xử lý
 
-Phía vận hành giữ nguyên label nghiệp vụ gốc.
+### 6.1. Trạng thái bản ghi
 
----
+Trạng thái thể hiện bản ghi đang nằm ở đâu trong queue vận hành:
 
-## 6. Trigger nghiệp vụ theo từng loại
+1. `Chờ xử lý`
+2. `Đang xử lý`
+3. `Hoàn thành`
 
-### 6.1. Báo lớp khai giảng
+### 6.2. Kết quả xử lý
 
-Điều kiện phát sinh:
+Kết quả xử lý thể hiện outcome của bản ghi:
 
-- Lớp mới được tạo
-- Trạng thái lớp là `Chờ khai giảng` hoặc `Đang học`
-- Chưa phát sinh buổi học nào
+1. `Xác nhận`
+2. `Từ chối`
+3. `Hủy`
+4. `Đã gửi thông tin`
+5. `Quá hạn`
 
-Nguồn:
+### 6.3. Nguyên tắc tách 2 lớp thông tin
 
-- `GVU`
+- `Trạng thái` trả lời câu hỏi: bản ghi này hiện đang ở đâu trong queue?
+- `Kết quả xử lý` trả lời câu hỏi: bản ghi này đã được xử lý ra sao?
+
+Không được gộp 2 khái niệm này thành 1 field duy nhất như model cũ.
+
+## 7. Mapping nghiệp vụ giữa Trạng thái và Kết quả xử lý
+
+### 7.1. Bản ghi mới thuộc nhóm cần phản hồi
+
+Khi hệ thống mới tạo bản ghi cho:
+
+- Báo lớp khai giảng
+- Báo lớp chuyển ngang
+- Báo đổi lịch học
+
+thì mặc định:
+
+- Trạng thái = `Chờ xử lý`
+- Kết quả xử lý = rỗng
+
+### 7.2. Giáo viên hoặc vận hành xác nhận
+
+Nếu giáo viên hoặc vận hành thao tác xác nhận:
+
+- Trạng thái = `Hoàn thành`
+- Kết quả xử lý = `Xác nhận`
+
+### 7.3. Giáo viên hoặc vận hành từ chối
+
+Nếu giáo viên hoặc vận hành thao tác từ chối:
+
+- Trạng thái = `Đang xử lý`
+- Kết quả xử lý = `Từ chối`
+
+Ý nghĩa:
+
+- đã có outcome là giáo viên không nhận lớp
+- nhưng vận hành chưa kết thúc follow-up nghiệp vụ
+
+Sau đó, khi vận hành bấm `Đã xử lý`:
+
+- Trạng thái = `Hoàn thành`
+- Kết quả xử lý vẫn giữ = `Từ chối`
+
+### 7.4. Bản ghi chỉ gửi thông tin
+
+Với các bản ghi không cần giáo viên phản hồi:
+
+- Trạng thái = `Hoàn thành`
+- Kết quả xử lý = `Đã gửi thông tin`
+
+Áp dụng cho:
+
+- Báo lớp kết thúc
+- Khác
+
+### 7.5. Bản ghi quá hạn SLA
+
+Nếu bản ghi đang `Chờ xử lý` mà quá SLA chưa có phản hồi:
+
+- Trạng thái = `Đang xử lý`
+- Kết quả xử lý = `Quá hạn`
+
+Sau đó vận hành có thể chốt lại một trong 3 hướng:
+
+- `Xác nhận`
+- `Từ chối`
+- `Hủy`
+
+Khi chốt xong:
+
+- Trạng thái = `Hoàn thành`
+- Kết quả xử lý = giá trị mà vận hành chọn
+
+### 7.6. Bản ghi bị hủy do đổi giáo viên
+
+Nếu bản ghi cũ đang `Chờ xử lý` mà vận hành vào màn thông tin lớp và đổi giáo viên:
+
+- bản ghi cũ được gán:
+  - Trạng thái = `Hoàn thành`
+  - Kết quả xử lý = `Hủy`
+- đồng thời hệ thống tạo một bản ghi mới cho giáo viên mới:
+  - Trạng thái = `Chờ xử lý`
+  - Kết quả xử lý = rỗng
+
+Với bản ghi cũ:
+
+- giáo viên cũ click link sẽ không còn popup xác nhận
+- giáo viên cũ chỉ xem được ở lịch sử
+
+## 8. Rule đặc biệt khi đổi lịch
+
+Nếu bản ghi hiện tại đang `Chờ xử lý` mà vận hành vào màn thông tin lớp và đổi lịch:
+
+- hệ thống update trực tiếp thông tin lịch mới trên chính dòng hiện tại
+- cặp khóa vẫn là `Mã lớp + Giáo viên`
+- không tạo bản ghi mới
+
+Nội dung cần được update:
+
+- ngày bắt đầu
+- first session
+- schedule
+- deadline SLA nếu có thay đổi
+- nội dung Telegram / ERP display nếu cần
+
+Lưu ý phản biện:
+
+- rule này chỉ nên áp dụng khi bản ghi đang `Chờ xử lý`
+- nếu bản ghi đã vào `Đang xử lý` hoặc `Hoàn thành` thì không nên overwrite lịch sử
+
+## 9. Trigger nghiệp vụ theo từng loại
+
+### 9.1. Báo lớp khai giảng
+
+Điều kiện:
+
+- lớp mới được tạo
+- lớp ở trạng thái chờ khai giảng hoặc đang học
+- chưa phát sinh buổi học đầu tiên
 
 Kết quả:
 
-- Tạo một bản ghi thông báo ở trạng thái `Chờ xác nhận`
-- Gửi Telegram kèm link ERP
-- Giáo viên phải phản hồi trên ERP
+- tạo bản ghi `Chờ xử lý`
+- kết quả xử lý rỗng
+- gửi Telegram kèm link ERP
 
-### 6.2. Báo lớp chuyển ngang
+### 9.2. Báo lớp chuyển ngang
 
-Điều kiện phát sinh:
+Điều kiện:
 
-- Lớp đang học
-- Đã phát sinh buổi học trong quá khứ
-- Có đổi giáo viên, hoặc vừa đổi giáo viên vừa đổi lịch
-
-Nguồn:
-
-- `CM`
+- lớp đang học
+- đã phát sinh buổi học trong quá khứ
+- có đổi giáo viên, hoặc vừa đổi giáo viên vừa đổi lịch
 
 Kết quả:
 
-- Phát sinh 2 nhánh thông báo:
-  - cho giáo viên mới: cần xác nhận
-  - cho giáo viên cũ: nhận thông tin thay đổi
-- Trong dữ liệu vận hành cần có cờ `GV mới` và `GV cũ`
+- với giáo viên mới: tạo bản ghi cần xác nhận
+- với giáo viên cũ: thông tin cũ được chuyển thành lịch sử khi cần
 
-Lưu ý:
+Trong UI vận hành cần có cờ phân biệt:
 
-- Màn giáo viên hiện chỉ cần tập trung vào item của giáo viên đang nhận lớp.
-- Thông báo dành cho giáo viên cũ là luồng thông tin, không cần phản hồi.
+- `GV mới`
+- `GV cũ`
 
-### 6.3. Báo đổi lịch học
+### 9.3. Báo đổi lịch học
 
-Điều kiện phát sinh:
+Điều kiện:
 
-- Lớp đang học
-- Đã phát sinh buổi học trong quá khứ
-- Giữ nguyên giáo viên
-- Chỉ đổi lịch học
-
-Nguồn:
-
-- `CM`
+- lớp đang học
+- đã phát sinh buổi học trong quá khứ
+- giữ nguyên giáo viên
+- chỉ đổi lịch học
 
 Kết quả:
 
-- Tạo bản ghi `Chờ xác nhận`
-- Gửi Telegram kèm link ERP
-- Giáo viên phản hồi trên ERP
+- tạo bản ghi `Chờ xử lý`
+- kết quả xử lý rỗng
+- nếu tiếp tục đổi lịch khi bản ghi vẫn đang `Chờ xử lý` thì update trên cùng bản ghi
 
-### 6.4. Báo lớp kết thúc
-
-Điều kiện phát sinh:
-
-- Khi GVU hoặc VHLH chuyển trạng thái lớp sang `Kết thúc`
-
-Kết quả chuẩn hiện tại đã chốt trong thread:
-
-- Chỉ gửi thông tin cho giáo viên qua Telegram
-- Không yêu cầu giáo viên phản hồi trên ERP
-- Không hiển thị ở màn giáo viên
-
-Lưu ý:
-
-- Tài liệu gốc có đề xuất hiện pop-up yêu cầu giáo viên xác nhận đã nhận thông tin. Đây là một điểm khác với quyết định hiện tại trong thread. Nếu sau này đổi lại định hướng nghiệp vụ, cần cập nhật lại cả data model, status flow và màn giáo viên.
-
-### 6.5. Khác
-
-Mục đích:
-
-- Dùng cho các trường hợp thủ công do vận hành chủ động thêm vào danh sách thông báo
-
-Ví dụ điển hình:
-
-- Báo lớp up/down level
-- Các biến động đặc thù chưa có trigger tự động
+### 9.4. Báo lớp kết thúc
 
 Kết quả:
 
-- Tạo từ thao tác thủ công ở vận hành
-- Gửi Telegram
-- Trạng thái mặc định là `Đã gửi thông tin`
-- Không hiển thị trong màn giáo viên
+- Trạng thái = `Hoàn thành`
+- Kết quả xử lý = `Đã gửi thông tin`
+- không hiển thị trong màn giáo viên
 
----
+### 9.5. Khác
 
-## 7. SLA xác nhận
+Được tạo thủ công bởi vận hành.
 
-Rule từ tài liệu nghiệp vụ:
+Kết quả:
 
-- Với lớp trong tuần: SLA xác nhận là `T - 24 giờ`
-- Với lớp Thứ 7, Chủ nhật: SLA xác nhận là `T - 48 giờ`
+- Trạng thái = `Hoàn thành`
+- Kết quả xử lý = `Đã gửi thông tin`
+- không hiển thị trong màn giáo viên
+
+## 10. Rule SLA
+
+Rule business hiện tại:
+
+- lớp trong tuần: xác nhận trước `T - 24h`
+- lớp thứ 7, chủ nhật: xác nhận trước `T - 48h`
 
 Trong đó:
 
 - `T` là thời điểm lớp diễn ra
 
-Hậu quả khi quá SLA:
+Nếu quá SLA:
 
-- Chuyển item sang nhóm `Quá hạn xác nhận`
-- Vận hành tiếp tục follow-up
+- hệ thống chuyển bản ghi từ `Chờ xử lý` sang `Đang xử lý`
+- hệ thống gán kết quả xử lý = `Quá hạn`
+
+## 11. Rule Telegram
+
+Mọi tin nhắn Telegram gửi cho giáo viên phải gồm:
+
+- thông tin lớp tối thiểu
+- hướng dẫn vào ERP
+- link ERP đúng với bản ghi hiện tại
+
+Thông tin lớp tối thiểu:
+
+- Mã lớp
+- Ngày bắt đầu
+- Thời gian học
+- Level
+- nếu cần: loại lớp, giáo viên cũ/giáo viên mới
 
 Lưu ý:
 
-- Demo hiện mới có khái niệm `SLA`, `Cần ưu tiên`, `Sắp hết hạn`, `Quá hạn`, nhưng chưa thể hiện đầy đủ logic phân biệt weekday/weekend theo rule chuẩn.
+- Telegram là kênh thông báo
+- ERP mới là nơi ghi nhận kết quả chính thức
 
----
+## 12. Màn vận hành
 
-## 8. Trạng thái nghiệp vụ
+### 12.1. Cách tổ chức giao diện
 
-Danh sách trạng thái chuẩn đang dùng:
+Màn vận hành được đề xuất theo:
 
-1. `Chờ xác nhận`
-2. `Đã xác nhận`
-3. `Từ chối`
-4. `Quá hạn`
-5. `Đã gửi thông tin`
+- Tab:
+  - `Chờ xử lý`
+  - `Đang xử lý`
+  - `Hoàn thành`
+- Cột `Kết quả xử lý` hiển thị bằng tag
 
-Mapping sử dụng:
-
-- `Chờ xác nhận`: cho các loại cần phản hồi
-- `Đã xác nhận`: giáo viên hoặc vận hành xác nhận thành công
-- `Từ chối`: giáo viên hoặc vận hành chốt từ chối
-- `Quá hạn`: vượt SLA mà chưa có phản hồi
-- `Đã gửi thông tin`: cho các loại chỉ cần thông báo
-
-Trạng thái đã loại bỏ:
-
-- `Đã hủy`
-
----
-
-## 9. Rule Telegram
-
-Mọi tin nhắn Telegram gửi cho giáo viên phải bao gồm:
-
-- thông tin lớp tối thiểu theo kịch bản
-- CTA hướng dẫn vào ERP
-- link ERP tương ứng với item
-
-Thông tin lớp tối thiểu theo kịch bản thường gồm:
+### 12.2. Các cột thông tin tối thiểu
 
 - Mã lớp
-- Thời gian học
-- Ngày bắt đầu học
-- Level
+- Giáo viên
+- Loại thông báo
+- Nguồn
+- Ngày bắt đầu
+- Lịch học
+- Hạn phản hồi
+- Kết quả xử lý
+- Last update
 
-Ngoài ra còn có:
+### 12.3. Các action chính
 
-- hướng dẫn kiểm tra thời khóa biểu ERP
-- note vận hành
-- các lưu ý nghiệp vụ về cover, giờ vào lớp, hỗ trợ kỹ thuật, hủy lớp, tài liệu
+Khi bản ghi ở `Chờ xử lý`:
 
-Lưu ý implementation:
+- Chi tiết
+- Gửi lại Telegram
+- Chuyển xác nhận
+- Chuyển từ chối
 
-- Demo hiện đã có `erpActionUrl` trong dữ liệu và append link ERP vào nội dung Telegram.
-- Demo chưa tách bộ template Telegram chuẩn cho từng loại GVVN/GVNN thành một cấu hình riêng.
+Khi bản ghi ở `Đang xử lý`:
 
----
+- Chi tiết
+- Gửi lại Telegram
+- Đánh dấu đã xử lý
+- nếu là `Quá hạn`: có thể chốt `Xác nhận`, `Từ chối`, hoặc `Hủy`
 
-## 10. Màn giáo viên chuẩn
+Khi bản ghi ở `Hoàn thành`:
 
-### 10.1. Mục tiêu
+- Chủ yếu xem chi tiết và lịch sử
 
-Màn giáo viên không phải là màn quản trị chi tiết. Mục tiêu là:
+## 13. Màn giáo viên
 
-- hiển thị các lớp cần phản hồi
-- cho giáo viên phản hồi nhanh
-- cho giáo viên xem lại lịch sử các phản hồi đã xử lý
+### 13.1. Phạm vi hiển thị
 
-### 10.2. Cấu trúc màn
+Màn giáo viên chỉ hiển thị các bản ghi:
 
-Hai tab:
+- cần giáo viên phản hồi
+- đang `Chờ xử lý`
+
+Không hiển thị:
+
+- Báo lớp kết thúc
+- Khác
+- bản ghi đã bị `Hủy`
+- bản ghi đã vào `Đang xử lý` do quá hạn hoặc từ chối
+
+### 13.2. Cấu trúc màn
+
+Gồm 2 tab:
 
 1. `Chờ xác nhận`
 2. `Lịch sử`
 
-Không hiển thị ở màn giáo viên:
+### 13.3. Rule popup đầu vào
 
-- các thông báo chỉ gửi thông tin
-- các item `Khác`
-- các item `Báo lớp kết thúc`
+Khi giáo viên vào màn:
 
-### 10.3. Popup đầu vào
+- nếu còn bản ghi `Chờ xử lý` thì mở popup
+- popup cho xác nhận nhanh hoặc từ chối
 
-Khi giáo viên truy cập màn:
+Nếu bản ghi đã chuyển sang `Hủy`, `Quá hạn`, `Từ chối`, `Xác nhận`, `Đã gửi thông tin`:
 
-- nếu có item `Chờ xác nhận`, hệ thống mở popup thông báo
-- popup hiển thị danh sách các item đang chờ
-- mỗi item có CTA:
-  - `Xác nhận ngay`
-  - `Từ chối lớp`
+- chỉ hiển thị ở lịch sử
+- không còn popup xác nhận
 
-Flow:
+## 14. Audit trail
 
-- `Xác nhận ngay` mở popup confirm lại, hiển thị chi tiết lớp
-- sau khi xác nhận thành công, item biến mất khỏi danh sách chờ
-- `Từ chối lớp` mở popup yêu cầu nhập lý do và bắt buộc nhập
+Mọi thay đổi nghiệp vụ phải lưu event log.
 
-### 10.4. Danh sách chờ xác nhận
+Tối thiểu cần audit:
 
-Các cột tối thiểu nên có:
+- ai tạo bản ghi
+- ai gửi Telegram
+- ai xác nhận
+- ai từ chối
+- khi nào hệ thống đánh dấu quá hạn
+- khi nào vận hành đánh dấu đã xử lý
+- khi nào hệ thống hủy bản ghi cũ và tạo bản ghi mới do đổi giáo viên
+- khi nào lịch học trên bản ghi được update trực tiếp
 
-- Loại thông báo
-- Lớp
-- Ngày bắt đầu
-- Thời gian học
-- Level
-- Hạn xác nhận
-- Thao tác
+## 15. Điểm cần lưu ý cho BE/FE/QA
 
-Filter cần có:
+### 15.1. FE
 
-- search theo mã lớp / tên lớp
-- filter loại thông báo
+- không được tiếp tục dùng 1 field `status` để represent cả queue và outcome
+- UI vận hành phải tách rõ tab và tag kết quả xử lý
 
-Filter không cần giữ:
+### 15.2. BE
 
-- xóa bộ lọc riêng
-- các filter thiên về vận hành như nguồn, SLA, queue
+- cần model được `processingStatus` và `resolutionResult`
+- cần support transition logic thay vì cho FE set trạng thái tùy ý
 
-### 10.5. Danh sách lịch sử
+### 15.3. QA
 
-Các cột tối thiểu nên có:
+Cần cover tối thiểu các case:
 
-- Loại thông báo
-- Lớp
-- Ngày bắt đầu
-- Level
-- Kết quả
-- Cập nhật cuối
-- Ghi nhận gần nhất
-
-### 10.6. Những gì không cần ở màn giáo viên
-
-- Drawer vận hành kiểu chi tiết sâu
-- form ghi chú nội bộ
-- cột nguồn
-- cột teacher care quá nặng về backend workflow
-- danh sách các thông báo chỉ mang tính broadcast
-
----
-
-## 11. Màn vận hành chuẩn
-
-### 11.1. Mục tiêu
-
-Vận hành là nơi:
-
-- theo dõi toàn bộ queue
-- can thiệp xử lý ngoại lệ
-- gửi lại Telegram
-- xác nhận hoặc từ chối thay cho giáo viên sau khi xác minh
+- tạo mới bản ghi cần xác nhận
+- xác nhận bởi giáo viên
+- xác nhận bởi vận hành
+- từ chối bởi giáo viên
+- từ chối bởi vận hành
+- quá hạn SLA
+- vận hành chốt lại bản ghi quá hạn
+- đổi giáo viên khi bản ghi đang chờ xử lý
+- đổi lịch khi bản ghi đang chờ xử lý
 - tạo thông báo thủ công
 
-### 11.2. Các nhóm theo dõi logic
+## 16. Kết luận
 
-Từ tài liệu nghiệp vụ, vận hành về bản chất cần theo dõi 5 nhóm:
+Model nghiệp vụ mới cần được hiểu theo 2 lớp:
 
-1. Báo lớp khai giảng
-2. Báo lớp chuyển ngang
-3. Hoàn thành
-4. Quá hạn xác nhận
-5. Từ chối nhận lớp
+- `Trạng thái bản ghi` để theo dõi queue vận hành
+- `Kết quả xử lý` để thể hiện outcome của bản ghi
 
-Trong demo hiện tại, việc theo dõi đang kết hợp bởi:
+Đây là thay đổi quan trọng nhất so với model cũ, và là nền tảng để màn vận hành và màn giáo viên xử lý đúng nghiệp vụ trong các tình huống:
 
-- trạng thái
-- loại thông báo
-
-Điều này đủ cho demo, nhưng nếu lên production có thể cần thiết kế lại IA theo đúng grouping nghiệp vụ.
-
-### 11.3. Dữ liệu quan trọng ở vận hành
-
-Danh sách vận hành cần thể hiện:
-
-- mã lớp
-- giáo viên
-- mã GV
-- loại GV
-- teacher care
-- loại thông báo
-- nguồn
-- ngày bắt đầu
-- lịch học
-- hạn phản hồi
-- trạng thái
-- last update
-
-Riêng luồng chuyển ngang:
-
-- cần cờ `GV mới` / `GV cũ`
-
-### 11.4. Hành động của vận hành
-
-- Xem chi tiết
-- Gửi lại Telegram
-- Chuyển xác nhận thay cho giáo viên
-- Chuyển từ chối thay cho giáo viên
-- Thêm ghi chú vận hành
-- Tạo thông báo thủ công
-
-Các thao tác chuyển xác nhận hoặc chuyển từ chối thay cho giáo viên:
-
-- đều phải mở popup confirm/form
-- đều phải ghi vào log lịch sử xử lý
-
----
-
-## 12. Luồng tạo thủ công
-
-Từ màn vận hành:
-
-- bấm `Thêm thông báo thủ công`
-- search theo mã lớp
-- chọn lớp
-- nhập nội dung tin nhắn muốn gửi Telegram
-- bấm gửi
-
-Kết quả:
-
-- tạo record mới loại `Khác`
-- nguồn được suy ra theo rule GVU/CM
-- trạng thái là `Đã gửi thông tin`
-- không đi vào màn giáo viên
-
-Use case chính:
-
-- UP/DOWN level
-- các thông báo ngoài trigger tự động
-
----
-
-## 13. Log lịch sử xử lý
-
-Mỗi bản ghi cần giữ event log theo timeline.
-
-Những event tối thiểu:
-
-- Tạo yêu cầu
-- Gửi thông báo Telegram
-- Giáo viên xác nhận trên ERP
-- Giáo viên từ chối trên ERP
-- Vận hành chuyển xác nhận
-- Vận hành chuyển từ chối
-- Gửi lại Telegram
-- Ghi chú vận hành
-- Tạo yêu cầu thủ công
-
-Yêu cầu:
-
-- log phải lưu actor
-- thời gian
-- loại sự kiện
-- note
-- channel nếu có
-- result nếu có
-
----
-
-## 14. Những rule đã chốt nhưng chưa thể hiện đầy đủ trên UI/demo
-
-### 14.1. Rule nghiệp vụ chưa thể hiện đủ
-
-1. SLA weekday/weekend
-- Chưa tính chính xác T-24 và T-48 theo ngày học thực tế.
-
-2. Template Telegram chuẩn theo từng nhóm GVVN/GVNN
-- Hiện chưa được tách cấu hình riêng theo file template.
-
-3. Nhánh giáo viên cũ trong luồng chuyển ngang
-- Vận hành đã có cờ `GV cũ`/`GV mới`, nhưng cần quy định rõ hơn cách lưu, hiển thị, và whether có record riêng hay noti phụ.
-
-4. Báo lớp kết thúc
-- Tài liệu gốc và quyết định hiện tại đang khác nhau về việc có cần giáo viên bấm xác nhận đã nhận thông tin hay không.
-
-5. UP/DOWN level
-- Mới đang map sang `Khác`, chưa có nhãn hiển thị riêng ở vận hành.
-
-### 14.2. Gap sản phẩm hiện tại cần lưu ý
-
-1. Chưa có cấu hình teacher identity thật
-- Demo đang hard-code teacher code mẫu để mô phỏng.
-
-2. Chưa có mapping chính thức giữa Telegram message ID và ERP request ID
-- Hiện mới mô phỏng bằng `erpActionUrl`.
-
-3. Chưa có logic đồng bộ trạng thái thời gian thực
-- Demo đang chạy mock data/service local.
-
-4. Chưa có phân quyền thực
-- Chưa tách role vận hành, teacher care, giáo viên bằng auth thực tế.
-
-5. Chưa có cấu trúc tài liệu/quy trình xử lý đối với error cases
-- ví dụ Telegram fail, ERP link expired, giáo viên bấm link khi item đã đóng.
-
----
-
-## 15. Trạng thái sản phẩm demo hiện tại
-
-### 15.1. Đã có
-
-- Màn vận hành theo dõi queue
-- Màn giáo viên với 2 tab `Chờ xác nhận` và `Lịch sử`
-- Popup giáo viên khi vào màn
-- Flow xác nhận hoặc từ chối trên ERP
-- Telegram message có kèm link ERP trong mock data
-- Log timeline cơ bản
-- Luồng tạo thông báo thủ công
-
-### 15.2. Chưa có hoặc mới ở mức demo
-
-- rule SLA chuẩn theo ngày học
-- auth thực
-- backend thật
-- webhook/bot integration thật
-- template Telegram chuẩn hóa theo từng đối tượng
-- rule hiển thị hoàn chỉnh cho teacher old/new trong luồng chuyển ngang
-
----
-
-## 16. Đề xuất backlog tiếp theo
-
-### 16.1. FE
-
-1. Tách popup teacher thành component riêng
-2. Chuẩn hóa token text riêng cho teacher-facing labels
-3. Tách mock template Telegram thành config data
-
-### 16.2. BE
-
-1. Thiết kế request model chuẩn
-2. Lưu event log chuẩn hóa
-3. Tạo SLA engine theo weekday/weekend
-4. Mapping Telegram delivery status
-
-### 16.3. Product / Ops
-
-1. Chốt lại dứt điểm rule của `Báo lớp kết thúc`
-2. Chốt naming chuẩn cho `Khác` khi dùng cho `UP/DOWN level`
-3. Chốt danh mục lý do từ chối lớp của giáo viên
-
----
-
-## 17. Kết luận
-
-Baseline hiện tại nên được hiểu như sau:
-
-- ERP teacher module chỉ phục vụ các thông báo cần phản hồi.
-- Telegram là kênh push, ERP là nơi chốt trạng thái.
-- Vận hành là nơi điều phối toàn bộ queue và xử lý ngoại lệ.
-- Các luồng chỉ gửi thông tin không đưa vào màn giáo viên.
-
-Nếu team tiếp tục phát triển production version, tài liệu này nên được dùng làm spec working version cho FE/BE/QA, và được cập nhật tiếp sau khi Product chốt các điểm còn mở ở phần backlog.
+- xác nhận
+- từ chối
+- quá hạn
+- hủy do đổi giáo viên
+- update lịch trên cùng bản ghi

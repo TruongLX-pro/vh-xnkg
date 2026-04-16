@@ -3,27 +3,36 @@ import {
   CheckOutlined,
   CloseOutlined,
   EyeOutlined,
+  FlagOutlined,
   PhoneOutlined,
   PlusOutlined,
   RedoOutlined,
 } from '@ant-design/icons-vue'
 import { Empty } from 'ant-design-vue'
-import type { RequestItem, RequestStatus, RequestType, SourceDepartment } from '../../types'
+import type {
+  ProcessingStatus,
+  RequestItem,
+  RequestType,
+  ResolutionResult,
+  SourceDepartment,
+} from '../../types'
 import {
   getConfirmationMeta,
+  getProcessingStatusLabel,
+  getResolutionResultColor,
+  getResolutionResultLabel,
   getSlaMeta,
   getSourceLabel,
-  getStatusColor,
-  getStatusLabel,
   getTypeLabel,
   getTypeTone,
 } from '../../utils/requestPresentation'
 
 const props = defineProps<{
   rows: RequestItem[]
-  statusTab: RequestStatus
+  statusTab: ProcessingStatus
   typeFilter: 'All' | RequestType
   sourceFilter: 'All' | SourceDepartment
+  resultFilter: 'All' | ResolutionResult
   classSearch: string
   teacherSearch: string
   startDateFrom?: string
@@ -33,9 +42,10 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
-  'update:statusTab': [value: RequestStatus]
+  'update:statusTab': [value: ProcessingStatus]
   'update:typeFilter': [value: 'All' | RequestType]
   'update:sourceFilter': [value: 'All' | SourceDepartment]
+  'update:resultFilter': [value: 'All' | ResolutionResult]
   'update:classSearch': [value: string]
   'update:teacherSearch': [value: string]
   'update:startDateFrom': [value?: string]
@@ -46,6 +56,7 @@ const emit = defineEmits<{
   resend: [request: RequestItem]
   reject: [request: RequestItem]
   confirm: [request: RequestItem]
+  handle: [request: RequestItem]
   'open-manual': []
   reset: []
 }>()
@@ -58,17 +69,15 @@ const columns = [
   { title: 'Ngày bắt đầu', dataIndex: 'startDate', key: 'startDate', width: 120 },
   { title: 'Lịch học', dataIndex: 'scheduleSummary', key: 'scheduleSummary', width: 180 },
   { title: 'Hạn phản hồi', dataIndex: 'deadlineConfirmAt', key: 'deadlineConfirmAt', width: 170 },
-  { title: 'Trạng thái', key: 'status', width: 120 },
+  { title: 'Kết quả xử lý', key: 'resolutionResult', width: 150 },
   { title: 'Last update', key: 'lastUpdate', width: 190 },
   { title: 'Hành động', key: 'actions', width: 160, fixed: 'right' as const },
 ]
 
-const statuses: RequestStatus[] = [
-  'AwaitingConfirmation',
-  'Confirmed',
-  'Rejected',
-  'Expired',
-  'InformationSent',
+const statuses: ProcessingStatus[] = [
+  'Pending',
+  'InProgress',
+  'Done',
 ]
 
 const emptyImage = Empty.PRESENTED_IMAGE_SIMPLE
@@ -129,6 +138,19 @@ const emptyImage = Empty.PRESENTED_IMAGE_SIMPLE
           ]"
           @update:value="emit('update:sourceFilter', $event)"
         />
+        <a-select
+          :value="props.resultFilter"
+          class="erp-filter"
+          :options="[
+            { value: 'All', label: 'Tất cả kết quả xử lý' },
+            { value: 'Confirmed', label: 'Xác nhận' },
+            { value: 'Rejected', label: 'Từ chối' },
+            { value: 'Cancelled', label: 'Hủy' },
+            { value: 'Expired', label: 'Quá hạn' },
+            { value: 'InformationSent', label: 'Đã gửi thông tin' },
+          ]"
+          @update:value="emit('update:resultFilter', $event)"
+        />
         <a-date-picker
           :value="props.deadlineFrom"
           value-format="DD/MM/YYYY"
@@ -155,7 +177,7 @@ const emptyImage = Empty.PRESENTED_IMAGE_SIMPLE
           :type="props.statusTab === status ? 'primary' : 'default'"
           @click="emit('update:statusTab', status)"
         >
-          {{ getStatusLabel(status) }}
+          {{ getProcessingStatusLabel(status) }}
         </a-button>
       </div>
 
@@ -179,7 +201,7 @@ const emptyImage = Empty.PRESENTED_IMAGE_SIMPLE
       <template #emptyText>
         <a-empty
           :image="emptyImage"
-          :description="`Không có request ở trạng thái ${getStatusLabel(props.statusTab).toLowerCase()} theo bộ lọc hiện tại`"
+          :description="`Không có request ở trạng thái ${getProcessingStatusLabel(props.statusTab).toLowerCase()} theo bộ lọc hiện tại`"
         />
       </template>
       <template #bodyCell="{ column, record }">
@@ -218,15 +240,17 @@ const emptyImage = Empty.PRESENTED_IMAGE_SIMPLE
             <a-tag class="mt-1" :color="getSlaMeta(record).tone">{{ getSlaMeta(record).label }}</a-tag>
           </div>
         </template>
-        <template v-else-if="column.key === 'status'">
-          <a-tag :color="getStatusColor(record.status)">{{ getStatusLabel(record.status) }}</a-tag>
+        <template v-else-if="column.key === 'resolutionResult'">
+          <a-tag :color="getResolutionResultColor(record.resolutionResult)">
+            {{ getResolutionResultLabel(record.resolutionResult) }}
+          </a-tag>
         </template>
         <template v-else-if="column.key === 'lastUpdate'">
           <div>
             <div class="font-medium text-slate-900">{{ record.events[0]?.actor || '-' }}</div>
             <div class="text-xs text-slate-500">{{ record.events[0]?.time || '-' }}</div>
             <a-tag
-              v-if="record.status === 'Confirmed' && getConfirmationMeta(record)"
+              v-if="record.resolutionResult === 'Confirmed' && getConfirmationMeta(record)"
               class="mt-1"
               :color="getConfirmationMeta(record)?.tone"
             >
@@ -242,7 +266,10 @@ const emptyImage = Empty.PRESENTED_IMAGE_SIMPLE
               </button>
             </a-tooltip>
 
-            <a-tooltip v-if="record.status === 'AwaitingConfirmation'" title="Chuyển xác nhận">
+            <a-tooltip
+              v-if="record.processingStatus === 'Pending' || record.resolutionResult === 'Expired'"
+              title="Chuyển xác nhận"
+            >
               <button type="button" class="action-icon-btn action-icon-btn-primary" @click="emit('confirm', record)">
                 <check-outlined />
               </button>
@@ -250,9 +277,9 @@ const emptyImage = Empty.PRESENTED_IMAGE_SIMPLE
 
             <a-tooltip
               v-if="
-                record.status === 'AwaitingConfirmation'
-                  || record.status === 'Expired'
-                  || record.status === 'InformationSent'
+                record.processingStatus === 'Pending'
+                  || record.resolutionResult === 'Expired'
+                  || record.resolutionResult === 'InformationSent'
               "
               title="Gửi lại Telegram"
             >
@@ -261,9 +288,21 @@ const emptyImage = Empty.PRESENTED_IMAGE_SIMPLE
               </button>
             </a-tooltip>
 
-            <a-tooltip v-if="record.status === 'AwaitingConfirmation'" title="Chuyển từ chối">
+            <a-tooltip
+              v-if="record.processingStatus === 'Pending' || record.resolutionResult === 'Expired'"
+              title="Chuyển từ chối"
+            >
               <button type="button" class="action-icon-btn action-icon-btn-danger-outline" @click="emit('reject', record)">
                 <close-outlined />
+              </button>
+            </a-tooltip>
+
+            <a-tooltip
+              v-if="record.processingStatus === 'InProgress' && record.resolutionResult === 'Rejected'"
+              title="Đánh dấu đã xử lý"
+            >
+              <button type="button" class="action-icon-btn action-icon-btn-neutral" @click="emit('handle', record)">
+                <flag-outlined />
               </button>
             </a-tooltip>
           </div>

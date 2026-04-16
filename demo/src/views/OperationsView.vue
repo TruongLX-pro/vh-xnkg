@@ -12,6 +12,7 @@ const {
   statusTab,
   typeFilter,
   sourceFilter,
+  resultFilter,
   classSearch,
   teacherSearch,
   startDateFrom,
@@ -81,7 +82,7 @@ async function submitManualRequest() {
     scheduleSummary: selectedClass.value.scheduleSummary,
     noteToTeacher: manualMessage.value.trim(),
   })
-  statusTab.value = 'InformationSent'
+  statusTab.value = 'Done'
 }
 </script>
 
@@ -92,6 +93,7 @@ async function submitManualRequest() {
       :status-tab="statusTab"
       :type-filter="typeFilter"
       :source-filter="sourceFilter"
+      :result-filter="resultFilter"
       :class-search="classSearch"
       :teacher-search="teacherSearch"
       :start-date-from="startDateFrom"
@@ -101,6 +103,7 @@ async function submitManualRequest() {
       @update:status-tab="statusTab = $event"
       @update:type-filter="typeFilter = $event"
       @update:source-filter="sourceFilter = $event"
+      @update:result-filter="resultFilter = $event"
       @update:class-search="classSearch = $event"
       @update:teacher-search="teacherSearch = $event"
       @update:start-date-from="startDateFrom = $event"
@@ -111,6 +114,7 @@ async function submitManualRequest() {
       @resend="store.resendRequest"
       @reject="store.openReject"
       @confirm="store.openConfirm"
+      @handle="store.markRequestHandled"
       @open-manual="store.openManualModal"
       @reset="resetFilters"
     />

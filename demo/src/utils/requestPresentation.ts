@@ -1,5 +1,12 @@
 import { parseDateTime } from './date'
-import type { RequestItem, RequestStatus, RequestType, SourceDepartment } from '../types'
+import type {
+  ProcessingStatus,
+  RequestItem,
+  RequestStatus,
+  RequestType,
+  ResolutionResult,
+  SourceDepartment,
+} from '../types'
 
 export const rejectReasonOptions = [
   'Không phù hợp lịch dạy',
@@ -9,20 +16,32 @@ export const rejectReasonOptions = [
   'Lý do khác',
 ]
 
-const statusColorMap: Record<RequestStatus, string> = {
-  AwaitingConfirmation: 'gold',
-  Confirmed: 'green',
-  Rejected: 'red',
-  Expired: 'volcano',
-  InformationSent: 'blue',
+const processingStatusColorMap: Record<ProcessingStatus, string> = {
+  Pending: 'gold',
+  InProgress: 'processing',
+  Done: 'green',
 }
 
-const statusLabelMap: Record<RequestStatus, string> = {
-  AwaitingConfirmation: 'Chờ xác nhận',
-  Confirmed: 'Đã xác nhận',
+const processingStatusLabelMap: Record<ProcessingStatus, string> = {
+  Pending: 'Chờ xử lý',
+  InProgress: 'Đang xử lý',
+  Done: 'Hoàn thành',
+}
+
+const resultColorMap: Record<ResolutionResult, string> = {
+  Confirmed: 'green',
+  Rejected: 'red',
+  Cancelled: 'default',
+  InformationSent: 'blue',
+  Expired: 'volcano',
+}
+
+const resultLabelMap: Record<ResolutionResult, string> = {
+  Confirmed: 'Xác nhận',
   Rejected: 'Từ chối',
-  Expired: 'Quá hạn',
+  Cancelled: 'Hủy',
   InformationSent: 'Đã gửi thông tin',
+  Expired: 'Quá hạn',
 }
 
 const typeLabelMap: Record<RequestType, string> = {
@@ -47,11 +66,41 @@ const sourceLabelMap: Record<SourceDepartment, string> = {
 }
 
 export function getStatusColor(status: RequestStatus) {
-  return statusColorMap[status]
+  const map: Record<RequestStatus, string> = {
+    AwaitingConfirmation: processingStatusColorMap.Pending,
+    Confirmed: resultColorMap.Confirmed,
+    Rejected: resultColorMap.Rejected,
+    Expired: resultColorMap.Expired,
+    InformationSent: resultColorMap.InformationSent,
+  }
+  return map[status]
 }
 
 export function getStatusLabel(status: RequestStatus) {
-  return statusLabelMap[status]
+  const map: Record<RequestStatus, string> = {
+    AwaitingConfirmation: 'Chờ xác nhận',
+    Confirmed: 'Đã xác nhận',
+    Rejected: 'Từ chối',
+    Expired: 'Quá hạn',
+    InformationSent: 'Đã gửi thông tin',
+  }
+  return map[status]
+}
+
+export function getProcessingStatusColor(status: ProcessingStatus) {
+  return processingStatusColorMap[status]
+}
+
+export function getProcessingStatusLabel(status: ProcessingStatus) {
+  return processingStatusLabelMap[status]
+}
+
+export function getResolutionResultColor(result?: ResolutionResult) {
+  return result ? resultColorMap[result] : 'default'
+}
+
+export function getResolutionResultLabel(result?: ResolutionResult) {
+  return result ? resultLabelMap[result] : 'Chưa có kết quả'
 }
 
 export function getTypeLabel(type: RequestType) {
@@ -71,7 +120,7 @@ export function getSlaMeta(item: RequestItem) {
     return { tone: 'blue', label: 'Chỉ gửi thông tin' }
   }
 
-  if (item.status === 'Expired') {
+  if (item.resolutionResult === 'Expired') {
     return { tone: 'error', label: 'Quá hạn SLA' }
   }
 
@@ -83,19 +132,19 @@ export function getSlaMeta(item: RequestItem) {
   const deadline = parseDateTime(item.deadlineConfirmAt)
   const diffHours = (deadline.getTime() - now.getTime()) / (1000 * 60 * 60)
 
-  if (item.status === 'AwaitingConfirmation' && diffHours <= 6) {
+  if (item.processingStatus === 'Pending' && diffHours <= 6) {
     return { tone: 'warning', label: 'Sắp hết hạn' }
   }
 
-  if (item.status === 'AwaitingConfirmation' && diffHours <= 12) {
+  if (item.processingStatus === 'Pending' && diffHours <= 12) {
     return { tone: 'processing', label: 'Cần ưu tiên' }
   }
 
-  if (item.status === 'Confirmed') {
+  if (item.resolutionResult === 'Confirmed') {
     return { tone: 'success', label: 'Đã xác nhận' }
   }
 
-  if (item.status === 'Rejected') {
+  if (item.resolutionResult === 'Rejected') {
     return { tone: 'error', label: 'Đã từ chối' }
   }
 
@@ -103,7 +152,7 @@ export function getSlaMeta(item: RequestItem) {
 }
 
 export function getConfirmationMeta(item: RequestItem) {
-  if (item.status !== 'Confirmed' || !item.confirmedAt || !item.deadlineConfirmAt) {
+  if (item.resolutionResult !== 'Confirmed' || !item.confirmedAt || !item.deadlineConfirmAt) {
     return null
   }
 

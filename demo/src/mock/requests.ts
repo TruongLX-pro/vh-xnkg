@@ -1,4 +1,12 @@
-import type { RequestItem, RequestType, SourceDepartment, TeacherKind } from '../types'
+import type {
+  ProcessingStatus,
+  RequestItem,
+  RequestStatus,
+  RequestType,
+  ResolutionResult,
+  SourceDepartment,
+  TeacherKind,
+} from '../types'
 
 const CURRENT_TEACHER = {
   name: 'Nguyễn Thị An',
@@ -34,9 +42,43 @@ function buildTeacherTelegramNote(message: string, erpActionUrl: string) {
   return `${message}\n\nXác nhận trên ERP: ${erpActionUrl}`
 }
 
-function buildRequest(input: Omit<RequestItem, 'noteToTeacher'> & { noteMessage: string }) {
+function mapLegacyStatus(status?: RequestStatus): {
+  processingStatus: ProcessingStatus
+  resolutionResult?: ResolutionResult
+} {
+  switch (status) {
+    case 'AwaitingConfirmation':
+      return { processingStatus: 'Pending' }
+    case 'Confirmed':
+      return { processingStatus: 'Done', resolutionResult: 'Confirmed' }
+    case 'Rejected':
+      return { processingStatus: 'InProgress', resolutionResult: 'Rejected' }
+    case 'Expired':
+      return { processingStatus: 'InProgress', resolutionResult: 'Expired' }
+    case 'InformationSent':
+      return { processingStatus: 'Done', resolutionResult: 'InformationSent' }
+    default:
+      return { processingStatus: 'Pending' }
+  }
+}
+
+type RequestSeedInput = Omit<RequestItem, 'noteToTeacher' | 'processingStatus' | 'resolutionResult'> & {
+  noteMessage: string
+  processingStatus?: ProcessingStatus
+  resolutionResult?: ResolutionResult
+}
+
+function buildRequest(input: RequestSeedInput) {
+  const normalized = input.processingStatus
+    ? {
+      processingStatus: input.processingStatus,
+      resolutionResult: input.resolutionResult,
+    }
+    : mapLegacyStatus(input.status)
+
   return {
     ...input,
+    ...normalized,
     noteToTeacher: buildTeacherTelegramNote(input.noteMessage, input.erpActionUrl),
   }
 }
@@ -44,8 +86,9 @@ function buildRequest(input: Omit<RequestItem, 'noteToTeacher'> & { noteMessage:
 const teacherPortalRequests: RequestItem[] = [
   buildRequest({
     id: 'RQ-20260413-0001',
-    classCode: 'ENG240501',
-    className: 'Kids Starters A',
+    classCode: 'SBO.2026.0302',
+    className: 'Starters SBO 0302',
+    classMode: 'Lớp 1:4',
     courseName: 'Tiếng Anh Thiếu nhi',
     level: 'Starters',
     requestType: 'New Opening',
@@ -93,8 +136,9 @@ const teacherPortalRequests: RequestItem[] = [
   }),
   buildRequest({
     id: 'RQ-20260413-0002',
-    classCode: 'ENG240388',
-    className: 'Teens Flyers Plus',
+    classCode: 'SBO.2026.0308',
+    className: 'Flyers SBO 0308',
+    classMode: 'Lớp 1:1',
     courseName: 'Tiếng Anh Thiếu niên',
     level: 'Flyers',
     requestType: 'Schedule Change',
@@ -102,7 +146,7 @@ const teacherPortalRequests: RequestItem[] = [
       'Áp dụng với lớp đang học và đã phát sinh buổi trong quá khứ khi giữ nguyên giáo viên và chỉ đổi lịch học.',
     scenarioSummary:
       'Telegram gửi lịch học mới và kèm link ERP để giáo viên xác nhận tiếp tục dạy theo lịch điều chỉnh.',
-    status: 'AwaitingConfirmation',
+    status: 'Confirmed',
     sourceDepartment: 'CM',
     triggeredBy: 'cm_tranhn',
     teacherName: CURRENT_TEACHER.name,
@@ -118,7 +162,8 @@ const teacherPortalRequests: RequestItem[] = [
     createdAt: '13/04/2026 08:20',
     notifiedAt: '13/04/2026 08:22',
     classStatus: 'Đang học',
-    erpActionUrl: buildErpActionUrl('RQ-20260413-0002', 'pending'),
+    confirmedAt: '13/04/2026 08:45',
+    erpActionUrl: buildErpActionUrl('RQ-20260413-0002', 'history'),
     noteMessage:
       'Lịch học đã thay đổi. Vui lòng vào ERP để xác nhận lịch mới hoặc từ chối nếu không thể tiếp nhận.',
     requiresTeacherConfirmation: true,
@@ -129,15 +174,24 @@ const teacherPortalRequests: RequestItem[] = [
         '13/04/2026 08:22',
         'Gửi thông báo Telegram',
         'Hệ thống',
-        `Template: SCHEDULE_CHANGE_CONFIRM | ERP link: ${buildErpActionUrl('RQ-20260413-0002', 'pending')}`,
+        `Template: SCHEDULE_CHANGE_CONFIRM | ERP link: ${buildErpActionUrl('RQ-20260413-0002', 'history')}`,
         { channel: 'Telegram Bot', result: 'Thành công' },
+      ),
+      buildEvent(
+        'E-0004A',
+        '13/04/2026 08:45',
+        'Giáo viên xác nhận trên ERP',
+        `${CURRENT_TEACHER.name} (${CURRENT_TEACHER.code})`,
+        'Giáo viên đã xác nhận tiếp tục dạy theo lịch học mới.',
+        { channel: 'ERP', result: 'Thành công' },
       ),
     ],
   }),
   buildRequest({
     id: 'RQ-20260413-0003',
-    classCode: 'ENG240211',
-    className: 'Kids Movers B2',
+    classCode: 'SBO.2026.0211',
+    className: 'Movers SBO 0211',
+    classMode: 'Lớp 1:4',
     courseName: 'Tiếng Anh Thiếu nhi',
     level: 'Movers',
     requestType: 'Teacher Handover',
@@ -192,8 +246,9 @@ const teacherPortalRequests: RequestItem[] = [
   }),
   buildRequest({
     id: 'RQ-20260413-0004',
-    classCode: 'ENG240309',
-    className: 'Kids Starters Night',
+    classCode: 'SBO.2026.0309',
+    className: 'Starters SBO 0309',
+    classMode: 'Lớp 1:1',
     courseName: 'Tiếng Anh Thiếu nhi',
     level: 'Starters',
     requestType: 'Schedule Change',
@@ -246,8 +301,9 @@ const teacherPortalRequests: RequestItem[] = [
   }),
   buildRequest({
     id: 'RQ-20260413-0005',
-    classCode: 'ENG240155',
-    className: 'IELTS Foundation 1',
+    classCode: 'SBO.2026.0155',
+    className: 'IELTS Foundation SBO 0155',
+    classMode: 'Lớp 1:4',
     courseName: 'IELTS',
     level: 'Foundation',
     requestType: 'Class Ended',
@@ -377,7 +433,7 @@ function buildGenericAwaitingRequest(index: number): RequestItem {
   const requestId = `RQ-20260413-A${padNumber(index + 1, 4)}`
   const teacherName = genericTeacherNames[index % genericTeacherNames.length]
   const teacherCodePrefix = template.teacherType === 'GVNN' ? 'SB' : 'TD'
-  const teacherCode = `${teacherCodePrefix}${170 + index}`
+  const teacherCode = `${teacherCodePrefix}${270 + index}`
   const classNumber = 600 + index
   const day = 15 + (index % 10)
   const startTime = formatTime(index)
@@ -396,6 +452,7 @@ function buildGenericAwaitingRequest(index: number): RequestItem {
     id: requestId,
     classCode: `ENG24${classNumber}`,
     className: `${template.level} Batch ${index + 1}`,
+    classMode: index % 3 === 0 ? 'Lớp 1:1' : 'Lớp 1:4',
     courseName: template.courseName,
     level: template.level,
     requestType: template.requestType,
@@ -463,6 +520,7 @@ const additionalRequests: RequestItem[] = [
     id: 'RQ-20260413-0006',
     classCode: 'ENG240266',
     className: 'Teens Pre-IELTS 3',
+    classMode: 'Lớp 1:1',
     courseName: 'Pre-IELTS',
     level: 'Intermediate',
     requestType: 'Other',
@@ -504,6 +562,7 @@ const additionalRequests: RequestItem[] = [
     id: 'RQ-20260413-0007',
     classCode: 'ENG240512',
     className: 'Kids Flyers Weekend',
+    classMode: 'Lớp 1:4',
     courseName: 'Tiếng Anh Thiếu nhi',
     level: 'Flyers',
     requestType: 'New Opening',
@@ -542,6 +601,127 @@ const additionalRequests: RequestItem[] = [
         { channel: 'Telegram Bot', result: 'Thành công' },
       ),
       buildEvent('E-0017', '13/04/2026 08:01', 'Quá hạn xác nhận', 'Hệ thống', 'Tự động chuyển trạng thái quá hạn khi vượt SLA.'),
+    ],
+  }),
+  buildRequest({
+    id: 'RQ-20260413-0008',
+    classCode: 'SBO.2026.0418',
+    className: 'Movers SBO 0418',
+    classMode: 'Lớp 1:4',
+    courseName: 'Tiếng Anh Thiếu nhi',
+    level: 'Movers',
+    requestType: 'Teacher Handover',
+    requestTypeDescription:
+      'Áp dụng với lớp đang học và đã phát sinh buổi trong quá khứ khi đổi giáo viên hoặc vừa đổi giáo viên vừa đổi lịch học.',
+    scenarioSummary:
+      'Giáo viên đã từ chối và vận hành đã hoàn tất điều phối với giáo viên khác; bản ghi được chốt hoàn thành với kết quả từ chối.',
+    processingStatus: 'Done',
+    resolutionResult: 'Rejected',
+    status: 'Rejected',
+    sourceDepartment: 'CM',
+    triggeredBy: 'cm_vananh',
+    teacherName: 'Ngô Trúc Quỳnh',
+    teacherCode: 'TD542',
+    teacherType: 'GVVN',
+    teacherPhone: '0902888333',
+    teacherCareName: 'Phạm Thu Mai',
+    teacherHandoverRole: 'GV mới',
+    oldTeacherName: 'Hoàng Minh Châu',
+    oldTeacherCode: 'MC118',
+    oldTeacherPhone: '0912444666',
+    startDate: '18/04/2026',
+    firstSession: '18/04/2026 18:15',
+    scheduleSummary: 'Thứ 2 - Thứ 4 - Thứ 6 | 18:15 - 19:45',
+    hasPastFirstSession: true,
+    deadlineConfirmAt: '17/04/2026 18:15',
+    createdAt: '16/04/2026 09:00',
+    notifiedAt: '16/04/2026 09:02',
+    rejectedAt: '16/04/2026 10:25',
+    closedAt: '16/04/2026 14:40',
+    classStatus: 'Đang học',
+    erpActionUrl: buildErpActionUrl('RQ-20260413-0008', 'history'),
+    noteMessage: 'Giáo viên mới đã từ chối nhận lớp và Teacher Care đã điều phối sang giáo viên khác.',
+    rejectReason: 'Không thể tiếp nhận lịch học mới',
+    rejectNote: 'Teacher Care đã follow-up và tìm được giáo viên thay thế.',
+    requiresTeacherConfirmation: true,
+    events: [
+      buildEvent('E-0018', '16/04/2026 09:00', 'Tạo yêu cầu', 'CM', 'Phát sinh khi đổi giáo viên lớp đang học.'),
+      buildEvent(
+        'E-0019',
+        '16/04/2026 09:02',
+        'Gửi thông báo Telegram',
+        'Hệ thống',
+        `Template: TEACHER_HANDOVER_CONFIRM | ERP link: ${buildErpActionUrl('RQ-20260413-0008', 'history')}`,
+        { channel: 'Telegram Bot', result: 'Thành công' },
+      ),
+      buildEvent(
+        'E-0020',
+        '16/04/2026 10:25',
+        'Giáo viên từ chối trên ERP',
+        'Ngô Trúc Quỳnh (TD542)',
+        'Lý do: Không thể tiếp nhận lịch học mới',
+        { channel: 'ERP', result: 'Đã ghi nhận' },
+      ),
+      buildEvent(
+        'E-0021',
+        '16/04/2026 14:40',
+        'Vận hành đánh dấu đã xử lý',
+        'Teacher Care',
+        'Đã hoàn tất điều phối giáo viên khác. Bản ghi được chốt hoàn thành với kết quả từ chối.',
+      ),
+    ],
+  }),
+  buildRequest({
+    id: 'RQ-20260413-0009',
+    classCode: 'SBO.2026.0420',
+    className: 'Starters SBO 0420',
+    classMode: 'Lớp 1:1',
+    courseName: 'Tiếng Anh Thiếu nhi',
+    level: 'Starters',
+    requestType: 'New Opening',
+    requestTypeDescription:
+      'Tự động phát sinh khi tạo lớp mới ở trạng thái chờ khai giảng hoặc đang học nhưng chưa phát sinh buổi học nào.',
+    scenarioSummary:
+      'Bản ghi cũ được hủy vì vận hành đổi giáo viên khi bản ghi vẫn đang chờ xử lý; giao viên cũ chỉ còn xem ở lịch sử.',
+    processingStatus: 'Done',
+    resolutionResult: 'Cancelled',
+    status: 'InformationSent',
+    sourceDepartment: 'GVU',
+    triggeredBy: 'gvu_linhpt',
+    teacherName: 'Trịnh Hà My',
+    teacherCode: 'TD631',
+    teacherType: 'GVVN',
+    teacherPhone: '0903111222',
+    teacherCareName: 'Nguyễn Thị Mai',
+    startDate: '20/04/2026',
+    firstSession: '20/04/2026 19:00',
+    scheduleSummary: 'Thứ 3 - Thứ 5 | 19:00 - 20:30',
+    hasPastFirstSession: false,
+    deadlineConfirmAt: '19/04/2026 19:00',
+    createdAt: '16/04/2026 08:10',
+    notifiedAt: '16/04/2026 08:12',
+    closedAt: '16/04/2026 08:55',
+    classStatus: 'Chờ khai giảng',
+    erpActionUrl: buildErpActionUrl('RQ-20260413-0009', 'history'),
+    noteMessage: 'Bản ghi cũ đã bị hủy do lớp chuyển sang giáo viên khác trước khi giáo viên phản hồi.',
+    requiresTeacherConfirmation: true,
+    events: [
+      buildEvent('E-0022', '16/04/2026 08:10', 'Tạo yêu cầu', 'GVU', 'Phát sinh khi mở lớp mới chờ khai giảng.'),
+      buildEvent(
+        'E-0023',
+        '16/04/2026 08:12',
+        'Gửi thông báo Telegram',
+        'Hệ thống',
+        `Template: NEW_OPENING_CONFIRM | ERP link: ${buildErpActionUrl('RQ-20260413-0009', 'history')}`,
+        { channel: 'Telegram Bot', result: 'Thành công' },
+      ),
+      buildEvent(
+        'E-0024',
+        '16/04/2026 08:55',
+        'Hệ thống hủy bản ghi cũ',
+        'Hệ thống',
+        'Lớp được đổi giáo viên khi bản ghi cũ còn chờ xử lý. Bản ghi này được chuyển sang lịch sử với kết quả hủy.',
+      ),
     ],
   }),
 ]

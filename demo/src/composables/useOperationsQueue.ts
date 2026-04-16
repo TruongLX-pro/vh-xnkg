@@ -1,16 +1,17 @@
 import { computed, ref } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useTeachingRequestStore } from '../stores/teachingRequest'
-import type { RequestStatus, RequestType, SourceDepartment } from '../types'
+import type { ProcessingStatus, RequestType, ResolutionResult, SourceDepartment } from '../types'
 import { isDateInRange } from '../utils/date'
 
 export function useOperationsQueue() {
   const store = useTeachingRequestStore()
   const { requests } = storeToRefs(store)
 
-  const statusTab = ref<RequestStatus>('AwaitingConfirmation')
+  const statusTab = ref<ProcessingStatus>('Pending')
   const typeFilter = ref<'All' | RequestType>('All')
   const sourceFilter = ref<'All' | SourceDepartment>('All')
+  const resultFilter = ref<'All' | ResolutionResult>('All')
   const classSearch = ref('')
   const teacherSearch = ref('')
   const startDateFrom = ref<string>()
@@ -20,9 +21,11 @@ export function useOperationsQueue() {
 
   const rows = computed(() =>
     requests.value.filter((item) => {
-      const statusMatched = item.status === statusTab.value
+      const statusMatched = item.processingStatus === statusTab.value
       const typeMatched = typeFilter.value === 'All' || item.requestType === typeFilter.value
       const sourceMatched = sourceFilter.value === 'All' || item.sourceDepartment === sourceFilter.value
+      const resultMatched =
+        resultFilter.value === 'All' || item.resolutionResult === resultFilter.value
       const startDateMatched = isDateInRange(item.startDate, startDateFrom.value, startDateTo.value)
       const deadlineValue = item.deadlineConfirmAt?.split(' ')[0]
       const deadlineMatched =
@@ -41,6 +44,7 @@ export function useOperationsQueue() {
         statusMatched
         && typeMatched
         && sourceMatched
+        && resultMatched
         && startDateMatched
         && deadlineMatched
         && codeMatched
@@ -52,6 +56,7 @@ export function useOperationsQueue() {
   function resetFilters() {
     typeFilter.value = 'All'
     sourceFilter.value = 'All'
+    resultFilter.value = 'All'
     classSearch.value = ''
     teacherSearch.value = ''
     startDateFrom.value = undefined
@@ -64,6 +69,7 @@ export function useOperationsQueue() {
     statusTab,
     typeFilter,
     sourceFilter,
+    resultFilter,
     classSearch,
     teacherSearch,
     startDateFrom,

@@ -4,9 +4,11 @@ import { storeToRefs } from 'pinia'
 import { ref, watch } from 'vue'
 import { useTeachingRequestStore } from '../../stores/teachingRequest'
 import {
+  getProcessingStatusColor,
+  getProcessingStatusLabel,
+  getResolutionResultColor,
+  getResolutionResultLabel,
   getSourceLabel,
-  getStatusColor,
-  getStatusLabel,
   getTypeLabel,
 } from '../../utils/requestPresentation'
 
@@ -81,7 +83,14 @@ async function submitOperationalNote() {
               <a-descriptions-item label="Mã request">{{ selectedRequest.id }}</a-descriptions-item>
               <a-descriptions-item label="Loại thông báo">{{ getTypeLabel(selectedRequest.requestType) }}</a-descriptions-item>
               <a-descriptions-item label="Trạng thái">
-                <a-tag :color="getStatusColor(selectedRequest.status)">{{ getStatusLabel(selectedRequest.status) }}</a-tag>
+                <a-tag :color="getProcessingStatusColor(selectedRequest.processingStatus)">
+                  {{ getProcessingStatusLabel(selectedRequest.processingStatus) }}
+                </a-tag>
+              </a-descriptions-item>
+              <a-descriptions-item label="Kết quả xử lý">
+                <a-tag :color="getResolutionResultColor(selectedRequest.resolutionResult)">
+                  {{ getResolutionResultLabel(selectedRequest.resolutionResult) }}
+                </a-tag>
               </a-descriptions-item>
               <a-descriptions-item label="Nguồn">{{ getSourceLabel(selectedRequest.sourceDepartment) }}</a-descriptions-item>
               <a-descriptions-item label="Người thao tác nguồn">{{ selectedRequest.triggeredBy }}</a-descriptions-item>
@@ -188,7 +197,7 @@ async function submitOperationalNote() {
         </a-card>
 
         <div
-          v-if="selectedRequest.status === 'AwaitingConfirmation'"
+          v-if="selectedRequest.processingStatus === 'Pending'"
           class="rounded-[24px] border border-slate-200 bg-slate-50 p-5"
         >
           <div class="mb-2 text-base font-semibold text-slate-900">Can thiệp của vận hành</div>
@@ -200,6 +209,39 @@ async function submitOperationalNote() {
             <a-button type="primary" ghost @click="store.resendRequest(selectedRequest)">Gửi lại Telegram</a-button>
             <a-button type="primary" @click="store.openConfirm(selectedRequest)">Chuyển xác nhận</a-button>
             <a-button danger ghost @click="store.openReject(selectedRequest)">Chuyển từ chối</a-button>
+            <a-button @click="store.simulateSelectedScheduleChange()">Giả lập đổi lịch</a-button>
+            <a-button @click="store.simulateSelectedTeacherChange()">Giả lập đổi giáo viên</a-button>
+          </div>
+        </div>
+
+        <div
+          v-if="selectedRequest.processingStatus === 'InProgress' && selectedRequest.resolutionResult === 'Rejected'"
+          class="rounded-[24px] border border-slate-200 bg-slate-50 p-5"
+        >
+          <div class="mb-2 text-base font-semibold text-slate-900">Vận hành hoàn tất xử lý</div>
+          <div class="mb-4 text-sm leading-7 text-slate-600">
+            Bản ghi đang ở trạng thái đang xử lý. Khi nghiệp vụ đã được follow-up xong, vận hành có thể chốt hoàn thành tại đây.
+          </div>
+          <div class="flex flex-wrap gap-2">
+            <a-button type="primary" @click="store.markSelectedRequestHandled()">Đánh dấu đã xử lý</a-button>
+          </div>
+        </div>
+
+        <div
+          v-if="selectedRequest.processingStatus === 'InProgress' && selectedRequest.resolutionResult === 'Expired'"
+          class="rounded-[24px] border border-slate-200 bg-slate-50 p-5"
+        >
+          <div class="mb-2 text-base font-semibold text-slate-900">Vận hành chốt bản ghi quá hạn</div>
+          <div class="mb-4 text-sm leading-7 text-slate-600">
+            Bản ghi đã quá SLA. Vận hành cần chốt lại kết quả cuối cùng là xác nhận, từ chối hoặc hủy.
+          </div>
+          <div class="flex flex-wrap gap-2">
+            <a-button type="primary" ghost @click="store.resendRequest(selectedRequest)">Gửi lại Telegram</a-button>
+            <a-button type="primary" @click="store.openConfirm(selectedRequest)">Chuyển xác nhận</a-button>
+            <a-button danger ghost @click="store.openReject(selectedRequest)">Chuyển từ chối</a-button>
+            <a-button @click="store.cancelSelectedRequest('Vận hành chốt hủy bản ghi sau khi bản ghi quá hạn SLA.')">
+              Chuyển hủy
+            </a-button>
           </div>
         </div>
       </div>

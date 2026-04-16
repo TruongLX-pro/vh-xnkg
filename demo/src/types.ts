@@ -5,6 +5,15 @@ export type RequestStatus =
   | 'Expired'
   | 'InformationSent'
 
+export type ProcessingStatus = 'Pending' | 'InProgress' | 'Done'
+
+export type ResolutionResult =
+  | 'Confirmed'
+  | 'Rejected'
+  | 'Cancelled'
+  | 'InformationSent'
+  | 'Expired'
+
 export type RequestType =
   | 'New Opening'
   | 'Teacher Handover'
@@ -29,12 +38,15 @@ export interface RequestItem {
   id: string
   classCode: string
   className: string
+  classMode?: string
   courseName: string
   level: string
   requestType: RequestType
   requestTypeDescription: string
   scenarioSummary: string
-  status: RequestStatus
+  status?: RequestStatus
+  processingStatus: ProcessingStatus
+  resolutionResult?: ResolutionResult
   sourceDepartment: SourceDepartment
   triggeredBy: string
   teacherName: string
@@ -56,6 +68,7 @@ export interface RequestItem {
   confirmedAt?: string
   rejectedAt?: string
   expiredAt?: string
+  closedAt?: string
   classStatus: string
   noteToTeacher: string
   erpActionUrl: string
@@ -66,11 +79,9 @@ export interface RequestItem {
 }
 
 export interface RequestStats {
-  AwaitingConfirmation: number
-  Confirmed: number
-  Rejected: number
-  Expired: number
-  InformationSent: number
+  Pending: number
+  InProgress: number
+  Done: number
 }
 
 export interface RejectPayload {
