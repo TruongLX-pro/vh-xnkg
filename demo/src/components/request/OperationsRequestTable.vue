@@ -17,11 +17,9 @@ import type {
   SourceDepartment,
 } from '../../types'
 import {
-  getConfirmationMeta,
   getProcessingStatusLabel,
   getResolutionResultColor,
   getResolutionResultLabel,
-  getSlaMeta,
   getSourceLabel,
   getTypeLabel,
   getTypeTone,
@@ -235,10 +233,7 @@ const emptyImage = Empty.PRESENTED_IMAGE_SIMPLE
           {{ getSourceLabel(record.sourceDepartment) }}
         </template>
         <template v-else-if="column.key === 'deadlineConfirmAt'">
-          <div>
-            <div>{{ record.deadlineConfirmAt || '-' }}</div>
-            <a-tag class="mt-1" :color="getSlaMeta(record).tone">{{ getSlaMeta(record).label }}</a-tag>
-          </div>
+          {{ record.deadlineConfirmAt || '-' }}
         </template>
         <template v-else-if="column.key === 'resolutionResult'">
           <a-tag :color="getResolutionResultColor(record.resolutionResult)">
@@ -249,13 +244,6 @@ const emptyImage = Empty.PRESENTED_IMAGE_SIMPLE
           <div>
             <div class="font-medium text-slate-900">{{ record.events[0]?.actor || '-' }}</div>
             <div class="text-xs text-slate-500">{{ record.events[0]?.time || '-' }}</div>
-            <a-tag
-              v-if="record.resolutionResult === 'Confirmed' && getConfirmationMeta(record)"
-              class="mt-1"
-              :color="getConfirmationMeta(record)?.tone"
-            >
-              {{ getConfirmationMeta(record)?.label }}
-            </a-tag>
           </div>
         </template>
         <template v-else-if="column.key === 'actions'">
