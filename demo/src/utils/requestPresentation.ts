@@ -45,10 +45,10 @@ const resultLabelMap: Record<ResolutionResult, string> = {
 }
 
 const typeLabelMap: Record<RequestType, string> = {
-  'New Opening': 'Báo lớp khai giảng',
-  'Teacher Handover': 'Báo lớp chuyển ngang',
-  'Schedule Change': 'Báo đổi lịch học',
-  'Class Ended': 'Báo lớp kết thúc',
+  'New Opening': 'Khai giảng',
+  'Teacher Handover': 'Đổi giáo viên',
+  'Schedule Change': 'Đổi lịch học',
+  'Class Ended': 'Kết thúc',
   Other: 'Khác',
 }
 

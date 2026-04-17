@@ -69,14 +69,10 @@ const columns = [
   { title: 'Hạn phản hồi', dataIndex: 'deadlineConfirmAt', key: 'deadlineConfirmAt', width: 170 },
   { title: 'Kết quả xử lý', key: 'resolutionResult', width: 150 },
   { title: 'Last update', key: 'lastUpdate', width: 190 },
-  { title: 'Hành động', key: 'actions', width: 160, fixed: 'right' as const },
+  { title: 'Hành động', key: 'actions', width: 180, fixed: 'right' as const },
 ]
 
-const statuses: ProcessingStatus[] = [
-  'Pending',
-  'InProgress',
-  'Done',
-]
+const statuses: ProcessingStatus[] = ['Pending', 'InProgress', 'Done']
 
 const emptyImage = Empty.PRESENTED_IMAGE_SIMPLE
 </script>
@@ -118,10 +114,10 @@ const emptyImage = Empty.PRESENTED_IMAGE_SIMPLE
           class="erp-filter"
           :options="[
             { value: 'All', label: 'Tất cả loại thông báo' },
-            { value: 'New Opening', label: 'Báo lớp khai giảng' },
-            { value: 'Teacher Handover', label: 'Báo lớp chuyển ngang' },
-            { value: 'Schedule Change', label: 'Báo đổi lịch học' },
-            { value: 'Class Ended', label: 'Báo lớp kết thúc' },
+            { value: 'New Opening', label: 'Khai giảng' },
+            { value: 'Teacher Handover', label: 'Đổi giáo viên' },
+            { value: 'Schedule Change', label: 'Đổi lịch học' },
+            { value: 'Class Ended', label: 'Kết thúc' },
             { value: 'Other', label: 'Khác' },
           ]"
           @update:value="emit('update:typeFilter', $event)"
@@ -179,12 +175,15 @@ const emptyImage = Empty.PRESENTED_IMAGE_SIMPLE
         </a-button>
       </div>
 
-      <a-button type="primary" @click="emit('open-manual')">
-        <template #icon>
-          <plus-outlined />
-        </template>
-        Thêm thông báo thủ công
-      </a-button>
+      <div class="flex items-center gap-3">
+        <div class="text-sm text-slate-500">Tổng số: <span class="font-semibold text-slate-900">{{ props.rows.length }}</span></div>
+        <a-button type="primary" @click="emit('open-manual')">
+          <template #icon>
+            <plus-outlined />
+          </template>
+          Thêm thông báo
+        </a-button>
+      </div>
     </div>
 
     <a-table
@@ -209,6 +208,7 @@ const emptyImage = Empty.PRESENTED_IMAGE_SIMPLE
             <div class="text-xs text-slate-500">{{ record.className }}</div>
           </div>
         </template>
+
         <template v-else-if="column.key === 'teacherName'">
           <div class="min-w-0">
             <div class="flex items-center gap-1">
@@ -224,28 +224,36 @@ const emptyImage = Empty.PRESENTED_IMAGE_SIMPLE
             </a-tag>
           </div>
         </template>
+
         <template v-else-if="column.key === 'requestType'">
           <a-tag :color="getTypeTone(record.requestType)" class="border-0 whitespace-normal">
             {{ getTypeLabel(record.requestType) }}
           </a-tag>
         </template>
+
         <template v-else-if="column.key === 'sourceDepartment'">
           {{ getSourceLabel(record.sourceDepartment) }}
         </template>
+
         <template v-else-if="column.key === 'deadlineConfirmAt'">
           {{ record.deadlineConfirmAt || '-' }}
         </template>
+
         <template v-else-if="column.key === 'resolutionResult'">
-          <a-tag :color="getResolutionResultColor(record.resolutionResult)">
-            {{ getResolutionResultLabel(record.resolutionResult) }}
+          <a-tag
+            :color="getResolutionResultColor(record.resolutionResult ?? (record.processingStatus === 'Pending' ? 'InformationSent' : undefined))"
+          >
+            {{ getResolutionResultLabel(record.resolutionResult ?? (record.processingStatus === 'Pending' ? 'InformationSent' : undefined)) }}
           </a-tag>
         </template>
+
         <template v-else-if="column.key === 'lastUpdate'">
           <div>
             <div class="font-medium text-slate-900">{{ record.events[0]?.actor || '-' }}</div>
             <div class="text-xs text-slate-500">{{ record.events[0]?.time || '-' }}</div>
           </div>
         </template>
+
         <template v-else-if="column.key === 'actions'">
           <div class="flex items-center gap-2">
             <a-tooltip title="Chi tiết">
@@ -255,7 +263,11 @@ const emptyImage = Empty.PRESENTED_IMAGE_SIMPLE
             </a-tooltip>
 
             <a-tooltip
-              v-if="record.processingStatus === 'Pending' || record.resolutionResult === 'Expired'"
+              v-if="
+                record.processingStatus === 'Pending'
+                  || record.resolutionResult === 'Expired'
+                  || (record.processingStatus === 'InProgress' && record.resolutionResult === 'Rejected')
+              "
               title="Chuyển xác nhận"
             >
               <button type="button" class="action-icon-btn action-icon-btn-primary" @click="emit('confirm', record)">
@@ -271,7 +283,11 @@ const emptyImage = Empty.PRESENTED_IMAGE_SIMPLE
               "
               title="Gửi lại Telegram"
             >
-              <button type="button" class="action-icon-btn action-icon-btn-primary-outline" @click="emit('resend', record)">
+              <button
+                type="button"
+                class="action-icon-btn action-icon-btn-primary-outline"
+                @click="emit('resend', record)"
+              >
                 <redo-outlined />
               </button>
             </a-tooltip>
@@ -280,7 +296,11 @@ const emptyImage = Empty.PRESENTED_IMAGE_SIMPLE
               v-if="record.processingStatus === 'Pending' || record.resolutionResult === 'Expired'"
               title="Chuyển từ chối"
             >
-              <button type="button" class="action-icon-btn action-icon-btn-danger-outline" @click="emit('reject', record)">
+              <button
+                type="button"
+                class="action-icon-btn action-icon-btn-danger-outline"
+                @click="emit('reject', record)"
+              >
                 <close-outlined />
               </button>
             </a-tooltip>

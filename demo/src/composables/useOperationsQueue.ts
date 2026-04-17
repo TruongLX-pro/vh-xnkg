@@ -2,7 +2,7 @@ import { computed, ref } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useTeachingRequestStore } from '../stores/teachingRequest'
 import type { ProcessingStatus, RequestType, ResolutionResult, SourceDepartment } from '../types'
-import { isDateInRange } from '../utils/date'
+import { isDateInRange, parseDateTime } from '../utils/date'
 
 export function useOperationsQueue() {
   const store = useTeachingRequestStore()
@@ -20,7 +20,8 @@ export function useOperationsQueue() {
   const deadlineTo = ref<string>()
 
   const rows = computed(() =>
-    requests.value.filter((item) => {
+    requests.value
+      .filter((item) => {
       const statusMatched = item.processingStatus === statusTab.value
       const typeMatched = typeFilter.value === 'All' || item.requestType === typeFilter.value
       const sourceMatched = sourceFilter.value === 'All' || item.sourceDepartment === sourceFilter.value
@@ -50,7 +51,18 @@ export function useOperationsQueue() {
         && codeMatched
         && teacherMatched
       )
-    }),
+      })
+      .sort((left, right) => {
+        if (statusTab.value === 'Done') {
+          const leftTime = left.events[0]?.time ? parseDateTime(left.events[0].time).getTime() : 0
+          const rightTime = right.events[0]?.time ? parseDateTime(right.events[0].time).getTime() : 0
+          return rightTime - leftTime
+        }
+
+        const leftTime = left.deadlineConfirmAt ? parseDateTime(left.deadlineConfirmAt).getTime() : Number.MAX_SAFE_INTEGER
+        const rightTime = right.deadlineConfirmAt ? parseDateTime(right.deadlineConfirmAt).getTime() : Number.MAX_SAFE_INTEGER
+        return leftTime - rightTime
+      }),
   )
 
   function resetFilters() {

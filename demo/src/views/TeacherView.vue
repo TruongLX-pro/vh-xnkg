@@ -6,11 +6,10 @@ import { computed, ref, watch } from 'vue'
 import { useTeacherQueue } from '../composables/useTeacherQueue'
 import { useTeachingRequestStore } from '../stores/teachingRequest'
 import type { RequestItem } from '../types'
+import { parseDateTime } from '../utils/date'
 import {
-  getConfirmationMeta,
   getResolutionResultColor,
   getResolutionResultLabel,
-  getSlaMeta,
   getTypeTone,
 } from '../utils/requestPresentation'
 
@@ -31,11 +30,11 @@ const promptRequest = computed(() =>
   teacherPendingRequests.value.find((item) => item.id === promptRequestId.value) ?? null,
 )
 const teacherPromptModalWidth = computed(() =>
-  screens.value.xl ? 1180 : screens.value.lg ? 1080 : screens.value.md ? 820 : 'calc(100vw - 24px)',
+  screens.value.xl ? 680 : screens.value.lg ? 640 : screens.value.md ? 600 : 'calc(100vw - 24px)',
 )
 const teacherImportantNotes = [
   {
-    title: '📌 NOTE QUAN TRỌNG',
+    title: 'NOTE QUAN TRỌNG',
     body: '',
   },
   {
@@ -44,7 +43,7 @@ const teacherImportantNotes = [
   },
   {
     title: '2. Nhắc lịch',
-    body: 'Đặt báo thức để không quên lịch, và không cover buổi đầu tiên.',
+    body: 'Đặt báo thức để không quên lịch và không cover buổi đầu tiên.',
   },
   {
     title: '3. Vào lớp',
@@ -60,7 +59,7 @@ const teacherImportantNotes = [
   },
   {
     title: '6. Kiểm tra ERP',
-    body: 'Vui lòng kiểm tra lại lịch dạy trên ERP ngay sau khi xác nhận nhận lớp.',
+    body: 'Kiểm tra lại lịch dạy trên ERP ngay sau khi xác nhận nhận lớp.',
   },
   {
     title: '7. Cần hỗ trợ thêm',
@@ -165,7 +164,19 @@ function getTeacherTypeLabel(requestType: RequestItem['requestType']) {
     return 'Đổi giáo viên'
   }
 
-  return 'Báo lớp khai giảng'
+  return 'Khai giảng'
+}
+
+function getTeacherDeadlineTag(record: RequestItem) {
+  if (!record.deadlineConfirmAt) {
+    return { color: 'default', label: '-' }
+  }
+
+  const now = new Date(2026, 3, 16, 9, 0)
+
+  return parseDateTime(record.deadlineConfirmAt) < now
+    ? { color: 'red', label: 'Quá hạn' }
+    : { color: 'blue', label: 'Trong hạn' }
 }
 </script>
 
@@ -228,7 +239,7 @@ function getTeacherTypeLabel(requestType: RequestItem['requestType']) {
             class="w-[180px]"
             :options="[
               { value: 'All', label: 'Tất cả loại thông báo' },
-              { value: 'New Opening', label: 'Báo lớp khai giảng' },
+              { value: 'New Opening', label: 'Khai giảng' },
               { value: 'Teacher Handover', label: 'Đổi giáo viên' },
               { value: 'Schedule Change', label: 'Đổi lịch học' },
             ]"
@@ -275,7 +286,9 @@ function getTeacherTypeLabel(requestType: RequestItem['requestType']) {
           <template v-else-if="column.key === 'deadlineConfirmAt'">
             <div>
               <div>{{ record.deadlineConfirmAt }}</div>
-              <a-tag class="mt-1" :color="getSlaMeta(record).tone">{{ getSlaMeta(record).label }}</a-tag>
+              <a-tag class="mt-1" :color="getTeacherDeadlineTag(record).color">
+                {{ getTeacherDeadlineTag(record).label }}
+              </a-tag>
             </div>
           </template>
           <template v-else-if="column.key === 'actions'">
@@ -315,18 +328,9 @@ function getTeacherTypeLabel(requestType: RequestItem['requestType']) {
             {{ record.startDate }}
           </template>
           <template v-else-if="column.key === 'status'">
-            <div>
-              <a-tag :color="getResolutionResultColor(record.resolutionResult)">
-                {{ getResolutionResultLabel(record.resolutionResult) }}
-              </a-tag>
-              <a-tag
-                v-if="record.resolutionResult === 'Confirmed' && getConfirmationMeta(record)"
-                class="mt-1"
-                :color="getConfirmationMeta(record)?.tone"
-              >
-                {{ getConfirmationMeta(record)?.label }}
-              </a-tag>
-            </div>
+            <a-tag :color="getResolutionResultColor(record.resolutionResult)">
+              {{ getResolutionResultLabel(record.resolutionResult) }}
+            </a-tag>
           </template>
           <template v-else-if="column.key === 'level'">
             {{ record.level }}
@@ -351,77 +355,72 @@ function getTeacherTypeLabel(requestType: RequestItem['requestType']) {
       :width="teacherPromptModalWidth"
     >
       <template v-if="teacherPendingRequests.length">
-        <div class="space-y-4">
-          <div class="space-y-3">
+        <div class="space-y-3.5">
+          <div class="space-y-2.5">
             <div
               v-for="item in teacherPendingRequests"
               :key="item.id"
-              class="rounded-[22px] border border-slate-200 bg-[#f8fafc] px-4 py-4 sm:px-5"
+              class="rounded-[18px] border border-slate-200 bg-[#f8fafc] px-3 py-3"
             >
-              <div class="grid gap-4 lg:grid-cols-[380px_minmax(0,1fr)] lg:items-stretch xl:grid-cols-[400px_minmax(0,1fr)]">
-                <div class="min-w-0">
-                  <div class="flex h-full flex-col rounded-2xl border border-slate-200 bg-white p-4">
-                    <div class="flex flex-wrap items-center gap-2">
-                      <div class="font-semibold text-slate-900">{{ item.classCode }}</div>
-                      <a-tag :color="getTypeTone(item.requestType)" class="border-0">
-                        {{ getTeacherTypeLabel(item.requestType) }}
-                      </a-tag>
-                    </div>
-                    <div class="mt-3 text-sm text-slate-600">
-                      {{ item.startDate }} | {{ item.scheduleSummary }}
-                    </div>
-                    <div class="mt-2 text-sm text-slate-600">Level: {{ item.level }}</div>
-                    <div v-if="item.classMode" class="mt-2 text-sm text-slate-600">
-                      Loại lớp: {{ item.classMode }}
-                    </div>
-                    <div class="mt-3 text-sm font-semibold text-[#d46b08]">
-                      Hạn xác nhận: {{ item.deadlineConfirmAt }}
-                    </div>
-
-                    <div class="mt-auto pt-4 grid grid-cols-1 gap-2">
-                      <a-button
-                        type="primary"
-                        class="w-full min-w-0"
-                        :loading="isSubmitting"
-                        @click="openTeacherConfirm(item.id)"
-                      >
-                        Tôi đồng ý nhận lớp
-                      </a-button>
-                      <a-button danger ghost class="w-full min-w-0" @click="openTeacherReject(item.id)">
-                        Từ chối lớp
-                      </a-button>
-                    </div>
+              <div class="grid gap-2.5 md:grid-cols-[minmax(0,1fr)_168px] md:items-center">
+                <div class="min-w-0 rounded-xl border border-slate-200 bg-white px-3.5 py-3">
+                  <div class="flex flex-wrap items-center gap-2">
+                    <div class="font-semibold text-slate-900">{{ item.classCode }}</div>
+                    <a-tag :color="getTypeTone(item.requestType)" class="border-0">
+                      {{ getTeacherTypeLabel(item.requestType) }}
+                    </a-tag>
+                  </div>
+                  <div class="mt-1.5 text-sm text-slate-600">
+                    {{ item.startDate }} | {{ item.scheduleSummary }}
+                  </div>
+                  <div class="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-slate-600">
+                    <span>Level: {{ item.level }}</span>
+                    <span v-if="item.classMode" class="text-slate-300">|</span>
+                    <span v-if="item.classMode">Loại lớp: {{ item.classMode }}</span>
+                  </div>
+                  <div class="mt-2 text-sm font-semibold text-[#d46b08]">
+                    Hạn xác nhận: {{ item.deadlineConfirmAt }}
                   </div>
                 </div>
 
-                <div class="h-full rounded-2xl border border-amber-200 bg-amber-50/70 p-4">
-                  <div class="space-y-2 text-xs leading-5 text-slate-700">
-                    <div
-                      v-for="note in teacherImportantNotes"
-                      :key="note.title"
-                      :class="
-                        note.title === '📌 NOTE QUAN TRỌNG'
-                          ? ''
-                          : 'grid gap-y-0.5 lg:grid-cols-[120px_minmax(0,1fr)] lg:gap-x-3'
-                      "
-                    >
-                      <div
-                        :class="[
-                          'font-semibold text-slate-900',
-                          note.title === '📌 NOTE QUAN TRỌNG' ? 'text-sm text-amber-700' : '',
-                        ]"
-                      >
-                        {{ note.title }}
-                      </div>
-                      <div v-if="note.body" class="text-slate-700">
-                        {{ note.body }}
-                      </div>
-                    </div>
-                    <div class="mt-2 border-t border-amber-200 pt-2 font-semibold text-slate-900">
-                      Cảm ơn Thầy/Cô ạ! ❤️❤️❤️
-                    </div>
-                  </div>
+                <div class="grid grid-cols-1 gap-2 md:self-stretch md:content-center">
+                  <a-button
+                    type="primary"
+                    class="w-full"
+                    :loading="isSubmitting"
+                    @click="openTeacherConfirm(item.id)"
+                  >
+                    Tôi đồng ý nhận lớp
+                  </a-button>
+                  <a-button danger ghost class="w-full" @click="openTeacherReject(item.id)">
+                    Từ chối lớp
+                  </a-button>
                 </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="rounded-xl border border-amber-200 bg-amber-50/70 px-3.5 py-3">
+            <div class="space-y-1 text-[11px] leading-5 text-slate-700">
+              <div
+                v-for="note in teacherImportantNotes"
+                :key="note.title"
+                :class="note.title === teacherImportantNotes[0]?.title ? '' : 'grid gap-y-0.5 md:grid-cols-[108px_minmax(0,1fr)] md:gap-x-2.5'"
+              >
+                <div
+                  :class="[
+                    'font-semibold text-slate-900',
+                    note.title === teacherImportantNotes[0]?.title ? 'text-sm text-amber-700' : '',
+                  ]"
+                >
+                  {{ note.title }}
+                </div>
+                <div v-if="note.body" class="text-slate-700">
+                  {{ note.body }}
+                </div>
+              </div>
+              <div class="border-t border-amber-200 pt-2 font-semibold text-slate-900">
+                Cảm ơn Thầy/Cô ạ! ❤️❤️❤️
               </div>
             </div>
           </div>

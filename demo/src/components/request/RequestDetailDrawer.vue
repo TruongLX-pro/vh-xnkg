@@ -71,55 +71,55 @@ async function submitOperationalNote() {
     :open="detailVisible"
     width="860"
     placement="right"
-    :title="selectedRequest ? `${selectedRequest.classCode} - ${getTypeLabel(selectedRequest.requestType)}` : 'Chi tiết yêu cầu'"
+    :title="selectedRequest ? `${selectedRequest.classCode} - ${getTypeLabel(selectedRequest.requestType)}` : 'Chi tiáº¿t yÃªu cáº§u'"
     @close="store.closeDetail"
   >
     <template v-if="selectedRequest">
       <div class="space-y-6">
         <div class="grid gap-4 lg:grid-cols-2">
           <a-card :bordered="false" class="rounded-3xl bg-slate-50">
-            <div class="mb-3 text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">Thông tin yêu cầu</div>
+            <div class="mb-3 text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">ThÃ´ng tin yÃªu cáº§u</div>
             <a-descriptions :column="1" size="small">
-              <a-descriptions-item label="Mã request">{{ selectedRequest.id }}</a-descriptions-item>
-              <a-descriptions-item label="Loại thông báo">{{ getTypeLabel(selectedRequest.requestType) }}</a-descriptions-item>
-              <a-descriptions-item label="Trạng thái">
+              <a-descriptions-item label="MÃ£ request">{{ selectedRequest.id }}</a-descriptions-item>
+              <a-descriptions-item label="Loáº¡i thÃ´ng bÃ¡o">{{ getTypeLabel(selectedRequest.requestType) }}</a-descriptions-item>
+              <a-descriptions-item label="Tráº¡ng thÃ¡i">
                 <a-tag :color="getProcessingStatusColor(selectedRequest.processingStatus)">
                   {{ getProcessingStatusLabel(selectedRequest.processingStatus) }}
                 </a-tag>
               </a-descriptions-item>
-              <a-descriptions-item label="Kết quả xử lý">
-                <a-tag :color="getResolutionResultColor(selectedRequest.resolutionResult)">
-                  {{ getResolutionResultLabel(selectedRequest.resolutionResult) }}
+              <a-descriptions-item label="Káº¿t quáº£ xá»­ lÃ½">
+                <a-tag :color="getResolutionResultColor(selectedRequest.resolutionResult ?? (selectedRequest.processingStatus === 'Pending' ? 'InformationSent' : undefined))">
+                  {{ getResolutionResultLabel(selectedRequest.resolutionResult ?? (selectedRequest.processingStatus === 'Pending' ? 'InformationSent' : undefined)) }}
                 </a-tag>
               </a-descriptions-item>
-              <a-descriptions-item label="Nguồn">{{ getSourceLabel(selectedRequest.sourceDepartment) }}</a-descriptions-item>
-              <a-descriptions-item label="Người thao tác nguồn">{{ selectedRequest.triggeredBy }}</a-descriptions-item>
-              <a-descriptions-item label="Thời điểm tạo">{{ selectedRequest.createdAt }}</a-descriptions-item>
-              <a-descriptions-item label="Thời điểm gửi Telegram">{{ selectedRequest.notifiedAt || '-' }}</a-descriptions-item>
-              <a-descriptions-item label="Hạn phản hồi">{{ selectedRequest.deadlineConfirmAt || '-' }}</a-descriptions-item>
-              <a-descriptions-item v-if="selectedRequest.confirmedAt" label="Thời điểm xác nhận">{{ selectedRequest.confirmedAt }}</a-descriptions-item>
-              <a-descriptions-item v-if="selectedRequest.rejectedAt" label="Thời điểm từ chối">{{ selectedRequest.rejectedAt }}</a-descriptions-item>
-              <a-descriptions-item v-if="selectedRequest.expiredAt" label="Thời điểm quá hạn">{{ selectedRequest.expiredAt }}</a-descriptions-item>
+              <a-descriptions-item label="Nguá»“n">{{ getSourceLabel(selectedRequest.sourceDepartment) }}</a-descriptions-item>
+              <a-descriptions-item label="NgÆ°á»i thao tÃ¡c nguá»“n">{{ selectedRequest.triggeredBy }}</a-descriptions-item>
+              <a-descriptions-item label="Thá»i Ä‘iá»ƒm táº¡o">{{ selectedRequest.createdAt }}</a-descriptions-item>
+              <a-descriptions-item label="Thá»i Ä‘iá»ƒm gá»­i Telegram">{{ selectedRequest.notifiedAt || '-' }}</a-descriptions-item>
+              <a-descriptions-item label="Háº¡n pháº£n há»“i">{{ selectedRequest.deadlineConfirmAt || '-' }}</a-descriptions-item>
+              <a-descriptions-item v-if="selectedRequest.confirmedAt" label="Thá»i Ä‘iá»ƒm xÃ¡c nháº­n">{{ selectedRequest.confirmedAt }}</a-descriptions-item>
+              <a-descriptions-item v-if="selectedRequest.rejectedAt" label="Thá»i Ä‘iá»ƒm tá»« chá»‘i">{{ selectedRequest.rejectedAt }}</a-descriptions-item>
+              <a-descriptions-item v-if="selectedRequest.expiredAt" label="Thá»i Ä‘iá»ƒm quÃ¡ háº¡n">{{ selectedRequest.expiredAt }}</a-descriptions-item>
             </a-descriptions>
           </a-card>
 
           <a-card :bordered="false" class="rounded-3xl bg-slate-50">
-            <div class="mb-3 text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">Thông tin lớp</div>
+            <div class="mb-3 text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">ThÃ´ng tin lá»›p</div>
             <a-descriptions :column="1" size="small">
-              <a-descriptions-item label="Mã lớp">{{ selectedRequest.classCode }}</a-descriptions-item>
-              <a-descriptions-item label="Tên lớp">{{ selectedRequest.className }}</a-descriptions-item>
-              <a-descriptions-item label="Khóa học">{{ selectedRequest.courseName }}</a-descriptions-item>
+              <a-descriptions-item label="MÃ£ lá»›p">{{ selectedRequest.classCode }}</a-descriptions-item>
+              <a-descriptions-item label="TÃªn lá»›p">{{ selectedRequest.className }}</a-descriptions-item>
+              <a-descriptions-item label="KhÃ³a há»c">{{ selectedRequest.courseName }}</a-descriptions-item>
               <a-descriptions-item label="Level">{{ selectedRequest.level }}</a-descriptions-item>
-              <a-descriptions-item label="Ngày bắt đầu">{{ selectedRequest.startDate }}</a-descriptions-item>
-              <a-descriptions-item label="Buổi đầu">{{ selectedRequest.firstSession }}</a-descriptions-item>
-              <a-descriptions-item label="Lịch học">{{ selectedRequest.scheduleSummary }}</a-descriptions-item>
-              <a-descriptions-item label="Trạng thái lớp">{{ selectedRequest.classStatus }}</a-descriptions-item>
+              <a-descriptions-item label="NgÃ y báº¯t Ä‘áº§u">{{ selectedRequest.startDate }}</a-descriptions-item>
+              <a-descriptions-item label="Buá»•i Ä‘áº§u">{{ selectedRequest.firstSession }}</a-descriptions-item>
+              <a-descriptions-item label="Lá»‹ch há»c">{{ selectedRequest.scheduleSummary }}</a-descriptions-item>
+              <a-descriptions-item label="Tráº¡ng thÃ¡i lá»›p">{{ selectedRequest.classStatus }}</a-descriptions-item>
             </a-descriptions>
           </a-card>
         </div>
 
         <a-card :bordered="false" class="rounded-3xl">
-          <div class="mb-3 text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">Giáo viên phụ trách</div>
+          <div class="mb-3 text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">GiÃ¡o viÃªn phá»¥ trÃ¡ch</div>
           <div class="grid gap-4 lg:grid-cols-[1fr_1fr]">
             <div class="rounded-2xl bg-slate-50 p-4">
               <div class="flex items-start justify-between gap-3">
@@ -131,7 +131,7 @@ async function submitOperationalNote() {
                     </a-tag>
                   </div>
                   <div class="mt-1 text-sm text-slate-500">
-                    {{ selectedRequest.teacherCode }} · {{ selectedRequest.teacherType }}
+                    {{ selectedRequest.teacherCode }} Â· {{ selectedRequest.teacherType }}
                   </div>
                   <div class="mt-3 text-sm text-slate-600">Teacher Care: {{ selectedRequest.teacherCareName }}</div>
                 </div>
@@ -139,20 +139,20 @@ async function submitOperationalNote() {
                   <template #icon>
                     <phone-outlined />
                   </template>
-                  Gọi điện
+                  Gá»i Ä‘iá»‡n
                 </a-button>
               </div>
-              <div class="mt-3 text-sm text-slate-600">Số điện thoại: {{ selectedRequest.teacherPhone }}</div>
+              <div class="mt-3 text-sm text-slate-600">Sá»‘ Ä‘iá»‡n thoáº¡i: {{ selectedRequest.teacherPhone }}</div>
             </div>
 
             <div v-if="selectedRequest.oldTeacherName" class="rounded-2xl bg-slate-50 p-4">
               <div class="flex items-center gap-2 font-semibold text-slate-900">
-                <span>Giáo viên cũ</span>
-                <a-tag color="purple">GV cũ</a-tag>
+                <span>GiÃ¡o viÃªn cÅ©</span>
+                <a-tag color="purple">GV cÅ©</a-tag>
               </div>
               <div class="mt-2 text-sm text-slate-700">{{ selectedRequest.oldTeacherName }}</div>
               <div class="mt-1 text-sm text-slate-500">
-                {{ selectedRequest.oldTeacherCode || '-' }} · {{ selectedRequest.oldTeacherPhone || '-' }}
+                {{ selectedRequest.oldTeacherCode || '-' }} Â· {{ selectedRequest.oldTeacherPhone || '-' }}
               </div>
             </div>
           </div>
@@ -161,7 +161,7 @@ async function submitOperationalNote() {
         <a-card :bordered="false" class="rounded-3xl">
           <div class="mb-4 flex items-center gap-2 text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">
             <bell-outlined />
-            Lịch sử xử lý
+            Lá»‹ch sá»­ xá»­ lÃ½
           </div>
           <a-timeline>
             <a-timeline-item v-for="event in selectedRequest.events" :key="event.id">
@@ -172,8 +172,8 @@ async function submitOperationalNote() {
                 </div>
                 <div class="mt-2 text-sm text-slate-600">
                   {{ event.actor }}
-                  <span v-if="event.channel"> • {{ event.channel }}</span>
-                  <span v-if="event.result"> • {{ event.result }}</span>
+                  <span v-if="event.channel"> â€¢ {{ event.channel }}</span>
+                  <span v-if="event.result"> â€¢ {{ event.result }}</span>
                 </div>
                 <div class="mt-1 text-sm text-slate-500">{{ event.note }}</div>
               </div>
@@ -181,16 +181,16 @@ async function submitOperationalNote() {
           </a-timeline>
 
           <div class="mt-4 rounded-2xl border border-dashed border-slate-200 bg-white p-4">
-            <div class="mb-2 text-sm font-semibold text-slate-800">Thêm ghi chú vận hành</div>
+            <div class="mb-2 text-sm font-semibold text-slate-800">ThÃªm ghi chÃº váº­n hÃ nh</div>
             <a-textarea
               v-model:value="operationalNote"
               :rows="3"
               maxlength="500"
-              placeholder="Ghi lại các trao đổi nội bộ, kết quả gọi điện, hoặc quyết định xử lý tiếp theo"
+              placeholder="Ghi láº¡i cÃ¡c trao Ä‘á»•i ná»™i bá»™, káº¿t quáº£ gá»i Ä‘iá»‡n, hoáº·c quyáº¿t Ä‘á»‹nh xá»­ lÃ½ tiáº¿p theo"
             />
             <div class="mt-3 flex justify-end">
               <a-button type="primary" :loading="isSubmitting" @click="submitOperationalNote">
-                Lưu ghi chú
+                LÆ°u ghi chÃº
               </a-button>
             </div>
           </div>
@@ -200,17 +200,11 @@ async function submitOperationalNote() {
           v-if="selectedRequest.processingStatus === 'Pending'"
           class="rounded-[24px] border border-slate-200 bg-slate-50 p-5"
         >
-          <div class="mb-2 text-base font-semibold text-slate-900">Can thiệp của vận hành</div>
-          <div class="mb-4 text-sm leading-7 text-slate-600">
-            Phase 1 không có màn web cho giáo viên. Vận hành theo dõi phản hồi qua bot Telegram và có
-            thể chủ động chốt trạng thái thay cho giáo viên khi đã xác minh.
-          </div>
+          <div class="mb-2 text-base font-semibold text-slate-900">Can thiá»‡p cá»§a váº­n hÃ nh</div>
           <div class="flex flex-wrap gap-2">
-            <a-button type="primary" ghost @click="store.resendRequest(selectedRequest)">Gửi lại Telegram</a-button>
-            <a-button type="primary" @click="store.openConfirm(selectedRequest)">Chuyển xác nhận</a-button>
-            <a-button danger ghost @click="store.openReject(selectedRequest)">Chuyển từ chối</a-button>
-            <a-button @click="store.simulateSelectedScheduleChange()">Giả lập đổi lịch</a-button>
-            <a-button @click="store.simulateSelectedTeacherChange()">Giả lập đổi giáo viên</a-button>
+            <a-button type="primary" ghost @click="store.resendRequest(selectedRequest)">Gá»­i láº¡i Telegram</a-button>
+            <a-button type="primary" @click="store.openConfirm(selectedRequest)">Chuyá»ƒn xÃ¡c nháº­n</a-button>
+            <a-button danger ghost @click="store.openReject(selectedRequest)">Chuyá»ƒn tá»« chá»‘i</a-button>
           </div>
         </div>
 
@@ -218,12 +212,10 @@ async function submitOperationalNote() {
           v-if="selectedRequest.processingStatus === 'InProgress' && selectedRequest.resolutionResult === 'Rejected'"
           class="rounded-[24px] border border-slate-200 bg-slate-50 p-5"
         >
-          <div class="mb-2 text-base font-semibold text-slate-900">Vận hành hoàn tất xử lý</div>
-          <div class="mb-4 text-sm leading-7 text-slate-600">
-            Bản ghi đang ở trạng thái đang xử lý. Khi nghiệp vụ đã được follow-up xong, vận hành có thể chốt hoàn thành tại đây.
-          </div>
+          <div class="mb-2 text-base font-semibold text-slate-900">Váº­n hÃ nh hoÃ n táº¥t xá»­ lÃ½</div>
           <div class="flex flex-wrap gap-2">
-            <a-button type="primary" @click="store.markSelectedRequestHandled()">Đánh dấu đã xử lý</a-button>
+            <a-button type="primary" ghost @click="store.openConfirm(selectedRequest)">Chuyá»ƒn xÃ¡c nháº­n</a-button>
+            <a-button type="primary" @click="store.markSelectedRequestHandled()">ÄÃ¡nh dáº¥u Ä‘Ã£ xá»­ lÃ½</a-button>
           </div>
         </div>
 
@@ -231,16 +223,13 @@ async function submitOperationalNote() {
           v-if="selectedRequest.processingStatus === 'InProgress' && selectedRequest.resolutionResult === 'Expired'"
           class="rounded-[24px] border border-slate-200 bg-slate-50 p-5"
         >
-          <div class="mb-2 text-base font-semibold text-slate-900">Vận hành chốt bản ghi quá hạn</div>
-          <div class="mb-4 text-sm leading-7 text-slate-600">
-            Bản ghi đã quá SLA. Vận hành cần chốt lại kết quả cuối cùng là xác nhận, từ chối hoặc hủy.
-          </div>
+          <div class="mb-2 text-base font-semibold text-slate-900">Váº­n hÃ nh chá»‘t báº£n ghi quÃ¡ háº¡n</div>
           <div class="flex flex-wrap gap-2">
-            <a-button type="primary" ghost @click="store.resendRequest(selectedRequest)">Gửi lại Telegram</a-button>
-            <a-button type="primary" @click="store.openConfirm(selectedRequest)">Chuyển xác nhận</a-button>
-            <a-button danger ghost @click="store.openReject(selectedRequest)">Chuyển từ chối</a-button>
-            <a-button @click="store.cancelSelectedRequest('Vận hành chốt hủy bản ghi sau khi bản ghi quá hạn SLA.')">
-              Chuyển hủy
+            <a-button type="primary" ghost @click="store.resendRequest(selectedRequest)">Gá»­i láº¡i Telegram</a-button>
+            <a-button type="primary" @click="store.openConfirm(selectedRequest)">Chuyá»ƒn xÃ¡c nháº­n</a-button>
+            <a-button danger ghost @click="store.openReject(selectedRequest)">Chuyá»ƒn tá»« chá»‘i</a-button>
+            <a-button @click="store.cancelSelectedRequest('Váº­n hÃ nh chá»‘t há»§y báº£n ghi sau khi báº£n ghi quÃ¡ háº¡n SLA.')">
+              Chuyá»ƒn há»§y
             </a-button>
           </div>
         </div>
@@ -252,9 +241,9 @@ async function submitOperationalNote() {
     v-model:open="confirmVisible"
     :z-index="1600"
     :mask-closable="false"
-    title="Chuyển trạng thái sang xác nhận"
-    ok-text="Xác nhận"
-    cancel-text="Hủy"
+    title="Chuyá»ƒn tráº¡ng thÃ¡i sang xÃ¡c nháº­n"
+    ok-text="XÃ¡c nháº­n"
+    cancel-text="Há»§y"
     :ok-button-props="{ type: 'primary', disabled: !confirmReason.trim(), loading: isSubmitting }"
     :cancel-button-props="{ disabled: isSubmitting }"
     @ok="submitConfirm"
@@ -264,14 +253,14 @@ async function submitOperationalNote() {
       <a-alert
         type="info"
         show-icon
-        message="Vận hành xác nhận thay cho giáo viên"
-        description="Chỉ dùng khi Teacher Care đã xác minh và cần chốt trạng thái xác nhận trên hệ thống."
+        message="Váº­n hÃ nh xÃ¡c nháº­n thay cho giÃ¡o viÃªn"
+        description="Chá»‰ dÃ¹ng khi Teacher Care Ä‘Ã£ xÃ¡c minh vÃ  cáº§n chá»‘t tráº¡ng thÃ¡i xÃ¡c nháº­n trÃªn há»‡ thá»‘ng."
       />
       <a-textarea
         v-model:value="confirmReason"
         :rows="4"
         maxlength="500"
-        placeholder="Nhập lý do vận hành chuyển xác nhận thay cho giáo viên"
+        placeholder="Nháº­p lÃ½ do váº­n hÃ nh chuyá»ƒn xÃ¡c nháº­n thay cho giÃ¡o viÃªn"
       />
     </div>
   </a-modal>
@@ -280,9 +269,9 @@ async function submitOperationalNote() {
     v-model:open="rejectVisible"
     :z-index="1600"
     :mask-closable="false"
-    title="Chuyển trạng thái sang từ chối"
-    ok-text="Xác nhận từ chối"
-    cancel-text="Hủy"
+    title="Chuyá»ƒn tráº¡ng thÃ¡i sang tá»« chá»‘i"
+    ok-text="XÃ¡c nháº­n tá»« chá»‘i"
+    cancel-text="Há»§y"
     :ok-button-props="{ danger: true, disabled: !rejectReason, loading: isSubmitting }"
     :cancel-button-props="{ disabled: isSubmitting }"
     @ok="submitReject"
@@ -292,31 +281,31 @@ async function submitOperationalNote() {
       <a-alert
         type="error"
         show-icon
-        message="Vận hành xác nhận đã kiểm tra với giáo viên"
-        description="Chỉ dùng khi Teacher Care đã follow-up và cần chốt trạng thái xử lý trên hệ thống."
+        message="Váº­n hÃ nh xÃ¡c nháº­n Ä‘Ã£ kiá»ƒm tra vá»›i giÃ¡o viÃªn"
+        description="Chá»‰ dÃ¹ng khi Teacher Care Ä‘Ã£ follow-up vÃ  cáº§n chá»‘t tráº¡ng thÃ¡i xá»­ lÃ½ trÃªn há»‡ thá»‘ng."
       />
       <a-select
         v-model:value="rejectReason"
-        placeholder="Chọn lý do từ chối"
+        placeholder="Chá»n lÃ½ do tá»« chá»‘i"
         :options="rejectReasonOptions.map((item) => ({ value: item, label: item }))"
       />
       <a-textarea
         v-model:value="rejectTeacherReply"
         :rows="3"
         maxlength="500"
-        placeholder="Phản hồi chi tiết từ giáo viên"
+        placeholder="Pháº£n há»“i chi tiáº¿t tá»« giÃ¡o viÃªn"
       />
       <a-textarea
         v-model:value="rejectOperationNote"
         :rows="3"
         maxlength="500"
-        placeholder="Ghi chú xác minh của vận hành"
+        placeholder="Ghi chÃº xÃ¡c minh cá»§a váº­n hÃ nh"
       />
       <a-textarea
         v-model:value="rejectNextAction"
         :rows="3"
         maxlength="500"
-        placeholder="Bước xử lý tiếp theo"
+        placeholder="BÆ°á»›c xá»­ lÃ½ tiáº¿p theo"
       />
     </div>
   </a-modal>
