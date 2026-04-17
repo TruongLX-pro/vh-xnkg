@@ -121,7 +121,7 @@ async function submitManualRequest() {
 
     <a-modal
       v-model:open="manualVisible"
-      title="Thêm thông báo thủ công"
+      title="Thêm thông báo"
       ok-text="Gửi thông báo"
       cancel-text="Hủy"
       :ok-button-props="{ loading: isSubmitting, disabled: !selectedClass || !manualMessage.trim() }"
